@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { PLANS } from '@/lib/plans'
 
 export const metadata = {
-  title: 'Termos de Uso e Política de Reembolso — Vagas Remotas / Relocation',
+  title: 'Termos de Uso e Política de Reembolso — Simulador de Entrevistas | Vagas Remotas & Relocation',
 }
 
 export default function TermosPage() {
@@ -23,7 +23,7 @@ export default function TermosPage() {
           <section className="space-y-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 p-6">
             <h2 className="text-base font-medium text-black dark:text-zinc-50">O que é este serviço</h2>
             <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
-              O Vagas Remotas / Relocation é uma ferramenta online que gera perguntas de entrevista, avaliação de respostas
+              O Simulador de Entrevistas | Vagas Remotas & Relocation é uma ferramenta online que gera perguntas de entrevista, avaliação de respostas
               e revisão de currículo usando inteligência artificial (API da Anthropic). É oferecido por uma pessoa física, não
               por uma empresa registrada — não há CNPJ ou nota fiscal formal associada às compras. Ao comprar um plano, você está
               pagando por acesso a uma ferramenta digital, não por consultoria ou serviço prestado por terceiros.
