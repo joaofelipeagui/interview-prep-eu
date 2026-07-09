@@ -8,6 +8,9 @@ export type ProfessionId =
   | 'software'
   | 'security'
   | 'devops_sre'
+  | 'business_analyst'
+  | 'qa_engineer'
+  | 'ml_engineer'
   | 'tech_lead'
   | 'engineering_manager'
   | 'solutions_architect'
@@ -68,6 +71,27 @@ export const PROFESSIONS: Profession[] = [
     flag: '♾️',
     category: 'Execução técnica',
     domainContext: 'DevOps Engineer, Site Reliability Engineer (SRE), or Cloud Engineer roles — CI/CD pipelines, infrastructure as code (Terraform, Ansible), container orchestration (Kubernetes, Docker), observability and on-call incident response, reliability and uptime (SLOs/error budgets), cloud cost optimization',
+  },
+  {
+    id: 'business_analyst',
+    label: 'Analista de Negócios / Sistemas',
+    flag: '🔍',
+    category: 'Execução técnica',
+    domainContext: 'Business Analyst or Systems Analyst roles — requirements gathering and documentation, process mapping and gap analysis, bridging business stakeholders and technical teams, functional specifications, user acceptance testing, translating business needs into actionable technical requirements',
+  },
+  {
+    id: 'qa_engineer',
+    label: 'QA / Test Engineering',
+    flag: '✅',
+    category: 'Execução técnica',
+    domainContext: 'QA Engineer or Test Engineer roles — test planning and strategy, manual and automated testing, bug triage and reporting, test automation frameworks (Selenium, Cypress, Playwright), regression testing, quality gates in CI/CD pipelines',
+  },
+  {
+    id: 'ml_engineer',
+    label: 'Machine Learning / AI Engineer',
+    flag: '🤖',
+    category: 'Execução técnica',
+    domainContext: 'Machine Learning Engineer or AI Engineer roles — model training and evaluation, deploying and monitoring ML models in production (MLOps), feature engineering, model performance and drift monitoring, working with data scientists to productionize research, LLM/generative AI integration',
   },
   {
     id: 'management',
