@@ -1,4 +1,5 @@
 import Anthropic, { APIError } from '@anthropic-ai/sdk'
+import * as Sentry from '@sentry/nextjs'
 import { NextRequest, NextResponse } from 'next/server'
 import { getCountry } from '@/lib/countries'
 import { buildRoleContext } from '@/lib/professions'
@@ -11,6 +12,7 @@ import {
   recordLead,
 } from '@/lib/usageStore'
 import { getActiveSubscription } from '@/lib/subscriptions'
+import { recordFreeInterviewUsed } from '@/lib/analyticsStore'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -142,6 +144,7 @@ export async function POST(req: NextRequest) {
         }],
       })
 
+      if (!subscribed) await recordFreeInterviewUsed()
       return NextResponse.json({ feedback: textFromMessage(msg).trim() })
     }
 
@@ -153,8 +156,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Requisição inválida.' }, { status: 400 })
     }
     if (err instanceof APIError) {
+      Sentry.captureException(err)
       return NextResponse.json({ error: err.message }, { status: err.status ?? 500 })
     }
+    Sentry.captureException(err)
     return NextResponse.json({ error: 'Não foi possível processar sua solicitação. Tente novamente.' }, { status: 500 })
   }
 }

@@ -3,10 +3,23 @@
 import { useState } from 'react'
 import { COUNTRIES, type CountryId } from '@/lib/countries'
 import { groupProfessions, type ProfessionId, isProfessionComplete } from '@/lib/professions'
+import { getOrCreateClientId } from '@/lib/clientId'
 import CvFeedbackCard from './CvFeedbackCard'
+import PlansPanel, { type VerifiedSubscription } from './PlansPanel'
 import { Loader2, ArrowRight, RotateCcw } from 'lucide-react'
 
-export default function CvReviewPanel({ userEmail }: { userEmail: string }) {
+interface BlockedState {
+  title: string
+  subtitle: string
+}
+
+export default function CvReviewPanel({
+  userEmail,
+  onSubscribed,
+}: {
+  userEmail?: string
+  onSubscribed: (email: string, sub: VerifiedSubscription) => void
+}) {
   const [professionId, setProfessionId] = useState<ProfessionId>('management')
   const [customProfession, setCustomProfession] = useState('')
   const [countryId, setCountryId] = useState<CountryId | null>(null)
@@ -14,6 +27,7 @@ export default function CvReviewPanel({ userEmail }: { userEmail: string }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [feedback, setFeedback] = useState('')
+  const [blocked, setBlocked] = useState<BlockedState | null>(null)
 
   const country = COUNTRIES.find(c => c.id === countryId)
   const professionReady = isProfessionComplete(professionId, customProfession)
@@ -24,12 +38,21 @@ export default function CvReviewPanel({ userEmail }: { userEmail: string }) {
     setLoading(true)
     setError('')
     try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json', 'x-client-id': getOrCreateClientId() }
+      if (userEmail) headers['x-user-email'] = userEmail
       const res = await fetch('/api/cv-review', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-user-email': userEmail },
+        headers,
         body: JSON.stringify({ cvText, countryId, professionId, customProfession }),
       })
       const data = await res.json()
+      if (res.status === 429 && (data.scope === 'person' || data.scope === 'global')) {
+        setBlocked({
+          title: data.scope === 'person' ? 'Você já usou sua revisão de currículo gratuita' : 'Chegamos ao limite de revisões gratuitas de hoje',
+          subtitle: 'Escolha um plano pra revisar quantos currículos quiser, e destravar o simulador de entrevista sem limite.',
+        })
+        return
+      }
       if (!res.ok) throw new Error(data.error || 'Falha ao revisar o currículo.')
       setFeedback(data.feedback)
     } catch (e) {
@@ -42,6 +65,10 @@ export default function CvReviewPanel({ userEmail }: { userEmail: string }) {
   function reset() {
     setFeedback('')
     setError('')
+  }
+
+  if (blocked) {
+    return <PlansPanel title={blocked.title} subtitle={blocked.subtitle} knownEmail={userEmail} onVerified={onSubscribed} />
   }
 
   if (feedback) {

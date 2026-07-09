@@ -12,9 +12,27 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const SITE_URL = "https://interview-prep-eu-production.up.railway.app";
+const TITLE = "Simulador de Entrevista — Europa";
+const DESCRIPTION = "Treine entrevistas em inglês no estilo real de cada país europeu, adaptado à sua profissão em TI. Revisão de currículo incluída.";
+
 export const metadata: Metadata = {
-  title: "Simulador de Entrevista — Europa",
-  description: "Treino de entrevistas em inglês por estilo de país europeu",
+  metadataBase: new URL(SITE_URL),
+  title: TITLE,
+  description: DESCRIPTION,
+  openGraph: {
+    title: TITLE,
+    description: DESCRIPTION,
+    url: SITE_URL,
+    siteName: TITLE,
+    locale: "pt_BR",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: TITLE,
+    description: DESCRIPTION,
+  },
 };
 
 export default function RootLayout({

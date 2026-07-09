@@ -12,14 +12,29 @@ export const GLOBAL_EVALUATE_CAP = 140
 /** Separate, much cheaper ceiling on question-only generation, to block pure spam of the cheap endpoint. */
 const GLOBAL_QUESTION_CAP = 500
 
+/** Free CV review attempts share the same ~US$5 budget as evaluate calls (similar token cost per call) —
+ *  kept deliberately smaller than GLOBAL_EVALUATE_CAP since it's on top of, not instead of, that spend. */
+export const GLOBAL_CV_CAP = 30
+
 interface UsageData {
   globalEvaluateCount: number
   globalQuestionCount: number
+  globalCvCount: number
   usedIps: string[]
   usedClientIds: string[]
+  usedCvIps: string[]
+  usedCvClientIds: string[]
 }
 
-const EMPTY_USAGE: UsageData = { globalEvaluateCount: 0, globalQuestionCount: 0, usedIps: [], usedClientIds: [] }
+const EMPTY_USAGE: UsageData = {
+  globalEvaluateCount: 0,
+  globalQuestionCount: 0,
+  globalCvCount: 0,
+  usedIps: [],
+  usedClientIds: [],
+  usedCvIps: [],
+  usedCvClientIds: [],
+}
 
 let cache: UsageData | null = null
 let queue: Promise<unknown> = Promise.resolve()
@@ -91,6 +106,45 @@ export function checkAndRecordQuestionAttempt(): Promise<boolean> {
     data.globalQuestionCount += 1
     await persist()
     return true
+  })
+}
+
+/** Checks the person/global gates for a free CV review and, only if allowed, atomically records the attempt.
+ *  Tracked separately from the interview attempt so a person gets one free try at each feature. */
+export function checkAndRecordCvAttempt(ip: string, clientId: string): Promise<PersonUsageResult> {
+  return enqueue(async () => {
+    const data = await ensureLoaded()
+    if (data.usedCvIps.includes(ip) || data.usedCvClientIds.includes(clientId)) {
+      return { allowed: false, scope: 'person' }
+    }
+    if (data.globalCvCount >= GLOBAL_CV_CAP) {
+      return { allowed: false, scope: 'global' }
+    }
+    data.globalCvCount += 1
+    data.usedCvIps.push(ip)
+    data.usedCvClientIds.push(clientId)
+    await persist()
+    return { allowed: true }
+  })
+}
+
+/** Aggregate counts only — deliberately omits the IP/clientId lists to avoid exposing them, even to admin tooling. */
+export function getUsageSummary(): Promise<{
+  globalEvaluateCount: number
+  globalEvaluateCap: number
+  globalQuestionCount: number
+  globalCvCount: number
+  globalCvCap: number
+}> {
+  return enqueue(async () => {
+    const data = await ensureLoaded()
+    return {
+      globalEvaluateCount: data.globalEvaluateCount,
+      globalEvaluateCap: GLOBAL_EVALUATE_CAP,
+      globalQuestionCount: data.globalQuestionCount,
+      globalCvCount: data.globalCvCount,
+      globalCvCap: GLOBAL_CV_CAP,
+    }
   })
 }
 

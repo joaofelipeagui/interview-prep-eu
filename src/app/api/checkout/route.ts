@@ -1,6 +1,8 @@
+import * as Sentry from '@sentry/nextjs'
 import { NextRequest, NextResponse } from 'next/server'
 import { createCheckoutPreference, isMercadoPagoConfigured } from '@/lib/mercadoPago'
 import { getPlan } from '@/lib/subscriptions'
+import { recordCheckoutStarted } from '@/lib/analyticsStore'
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -21,9 +23,11 @@ export async function POST(req: NextRequest) {
     }
 
     const checkoutUrl = await createCheckoutPreference(plan, email.trim().toLowerCase())
+    await recordCheckoutStarted(plan)
     return NextResponse.json({ checkoutUrl })
   } catch (err) {
     console.error('Checkout error:', err)
+    Sentry.captureException(err)
     const message = err instanceof Error ? err.message : 'Não foi possível iniciar o pagamento.'
     return NextResponse.json({ error: message }, { status: 500 })
   }

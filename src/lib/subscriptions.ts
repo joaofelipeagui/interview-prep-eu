@@ -86,3 +86,22 @@ export function getActiveSubscription(email: string): Promise<Subscription | nul
     return active ?? null
   })
 }
+
+/** Support tool for buyers who mistyped their email at purchase or verification — rewrites all of
+ *  their subscription records to the corrected address. Returns how many records were updated. */
+export function updateSubscriptionEmail(oldEmail: string, newEmail: string): Promise<number> {
+  return enqueue(async () => {
+    const subs = await ensureLoaded()
+    const from = normalizeEmail(oldEmail)
+    const to = normalizeEmail(newEmail)
+    let updated = 0
+    for (const sub of subs) {
+      if (sub.email === from) {
+        sub.email = to
+        updated += 1
+      }
+    }
+    if (updated > 0) await persist()
+    return updated
+  })
+}

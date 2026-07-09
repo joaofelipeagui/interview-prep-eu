@@ -7,6 +7,7 @@ import { generateFeedbackPDF } from '@/lib/pdf'
 import FeedbackCard from '@/components/FeedbackCard'
 import PlansPanel, { type VerifiedSubscription } from '@/components/PlansPanel'
 import CvReviewPanel from '@/components/CvReviewPanel'
+import { getOrCreateClientId } from '@/lib/clientId'
 import { Loader2, ArrowRight, RotateCcw, Mic, Square, Download } from 'lucide-react'
 
 type Stage = 'select' | 'question' | 'evaluating' | 'feedback'
@@ -45,19 +46,9 @@ function getSpeechRecognitionCtor(): SpeechRecognitionConstructor | null {
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null
 }
 
-const CLIENT_ID_KEY = 'interview_prep_client_id'
 const CONSENT_KEY = 'interview_prep_consent'
 const USER_EMAIL_KEY = 'interview_prep_user_email'
 const PENDING_EMAIL_KEY = 'interview_prep_pending_email'
-
-function getOrCreateClientId(): string {
-  let id = localStorage.getItem(CLIENT_ID_KEY)
-  if (!id) {
-    id = crypto.randomUUID()
-    localStorage.setItem(CLIENT_ID_KEY, id)
-  }
-  return id
-}
 
 const FILLER_WORDS = ['um', 'uh', 'like', 'you know', 'kind of', 'sort of', 'i mean']
 
@@ -411,16 +402,7 @@ export default function Home() {
               )}
 
               {mode === 'cv' ? (
-                subscribed ? (
-                  <CvReviewPanel userEmail={subscription!.email} />
-                ) : (
-                  <PlansPanel
-                    title="Revisão de currículo é um recurso pago"
-                    subtitle="Escolha um plano pra desbloquear a revisão de currículo e o simulador de entrevista ilimitado."
-                    knownEmail={subscription?.email}
-                    onVerified={handleSubscriptionVerified}
-                  />
-                )
+                <CvReviewPanel userEmail={subscribed ? subscription?.email : undefined} onSubscribed={handleSubscriptionVerified} />
               ) : limitScope ? (
                 <PlansPanel
                   title={limitScope === 'person' ? 'Você já usou sua avaliação gratuita neste teste' : 'Chegamos ao limite de testes gratuitos de hoje'}

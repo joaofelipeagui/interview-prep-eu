@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { PLANS, type PlanId } from '@/lib/plans'
 import { CreditCard, Loader2, CheckCircle2 } from 'lucide-react'
 
@@ -158,6 +159,10 @@ export default function PlansPanel({
         </button>
         {verifyError && <p className="text-xs text-red-600 dark:text-red-400">{verifyError}</p>}
       </div>
+
+      <p className="text-center text-xs text-zinc-400 dark:text-zinc-600">
+        <Link href="/termos" className="underline hover:text-zinc-600 dark:hover:text-zinc-400">Termos de Uso e Política de Reembolso</Link>
+      </p>
     </div>
   )
 }

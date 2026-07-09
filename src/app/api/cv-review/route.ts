@@ -1,9 +1,12 @@
 import Anthropic, { APIError } from '@anthropic-ai/sdk'
+import * as Sentry from '@sentry/nextjs'
 import { NextRequest, NextResponse } from 'next/server'
 import { getCountry } from '@/lib/countries'
 import { buildRoleContext } from '@/lib/professions'
 import { LookupError, ValidationError } from '@/lib/errors'
 import { getActiveSubscription } from '@/lib/subscriptions'
+import { checkAndRecordCvAttempt } from '@/lib/usageStore'
+import { recordFreeCvUsed } from '@/lib/analyticsStore'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -17,15 +20,31 @@ function textFromMessage(msg: Anthropic.Message): string {
   return block.text
 }
 
+function clientIp(req: NextRequest): string {
+  const forwarded = req.headers.get('x-forwarded-for')
+  if (forwarded) return forwarded.split(',')[0].trim()
+  return req.headers.get('x-real-ip') ?? 'unknown'
+}
+
+async function hasActiveSubscription(req: NextRequest): Promise<boolean> {
+  const email = req.headers.get('x-user-email')
+  if (!email || !EMAIL_PATTERN.test(email.trim())) return false
+  const sub = await getActiveSubscription(email.trim().toLowerCase())
+  return sub !== null
+}
+
 export async function POST(req: NextRequest) {
   try {
-    const email = req.headers.get('x-user-email')
-    if (!email || !EMAIL_PATTERN.test(email.trim())) {
-      return NextResponse.json({ error: 'subscription_required' }, { status: 402 })
-    }
-    const sub = await getActiveSubscription(email.trim().toLowerCase())
-    if (!sub) {
-      return NextResponse.json({ error: 'subscription_required' }, { status: 402 })
+    const subscribed = await hasActiveSubscription(req)
+
+    if (!subscribed) {
+      const clientId = req.headers.get('x-client-id')
+      if (!clientId) throw new ValidationError('x-client-id header is required')
+      const ip = clientIp(req)
+      const usageResult = await checkAndRecordCvAttempt(ip, clientId)
+      if (!usageResult.allowed) {
+        return NextResponse.json({ error: 'limit_reached', scope: usageResult.scope }, { status: 429 })
+      }
     }
 
     const { cvText, countryId, professionId, customProfession } = await req.json()
@@ -48,6 +67,7 @@ export async function POST(req: NextRequest) {
       }],
     })
 
+    if (!subscribed) await recordFreeCvUsed()
     return NextResponse.json({ feedback: textFromMessage(msg).trim() })
   } catch (err) {
     console.error('CV review error:', err)
@@ -56,8 +76,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Requisição inválida.' }, { status: 400 })
     }
     if (err instanceof APIError) {
+      Sentry.captureException(err)
       return NextResponse.json({ error: err.message }, { status: err.status ?? 500 })
     }
+    Sentry.captureException(err)
     return NextResponse.json({ error: 'Não foi possível processar sua solicitação. Tente novamente.' }, { status: 500 })
   }
 }

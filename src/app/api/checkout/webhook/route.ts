@@ -1,6 +1,8 @@
+import * as Sentry from '@sentry/nextjs'
 import { NextRequest, NextResponse } from 'next/server'
 import { fetchPayment } from '@/lib/mercadoPago'
 import { recordSubscription, type PlanId } from '@/lib/subscriptions'
+import { recordCheckoutCompleted } from '@/lib/analyticsStore'
 
 export async function POST(req: NextRequest) {
   try {
@@ -38,9 +40,11 @@ export async function POST(req: NextRequest) {
     }
 
     await recordSubscription(email, plan as PlanId, paymentId)
+    await recordCheckoutCompleted(plan as PlanId)
     return NextResponse.json({ ok: true })
   } catch (err) {
     console.error('Webhook error:', err)
+    Sentry.captureException(err)
     // Still return 200 so Mercado Pago doesn't hammer retries for an error on our side we already logged.
     return NextResponse.json({ ok: false })
   }
