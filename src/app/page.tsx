@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { COUNTRIES, type CountryId } from '@/lib/countries'
 import { PROFESSIONS, type ProfessionId, isProfessionComplete } from '@/lib/professions'
 import { generateFeedbackPDF } from '@/lib/pdf'
+import FeedbackCard from '@/components/FeedbackCard'
 import { Loader2, ArrowRight, RotateCcw, Mic, Square, Download } from 'lucide-react'
 
 type Stage = 'select' | 'question' | 'evaluating' | 'feedback'
@@ -516,9 +517,7 @@ export default function Home() {
 
                       {stage === 'feedback' && (
                         <div className="space-y-4">
-                          <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 p-5 whitespace-pre-wrap text-sm leading-relaxed text-black dark:text-zinc-50">
-                            {feedback}
-                          </div>
+                          <FeedbackCard feedback={feedback} />
                           <div className="flex flex-wrap gap-3">
                             <button
                               onClick={nextQuestion}
