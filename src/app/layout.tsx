@@ -12,7 +12,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const SITE_URL = "https://interview-prep-eu-production.up.railway.app";
+const SITE_URL = "https://vagas-remotas-relocation.up.railway.app";
 const TITLE = "Simulador de Entrevistas | Vagas Remotas & Relocation";
 const DESCRIPTION = "Treine entrevistas em inglês no estilo real de cada país europeu, adaptado à sua profissão em TI. Revisão de currículo incluída.";
 
