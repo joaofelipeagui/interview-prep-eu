@@ -21,10 +21,10 @@ export default async function Image() {
       >
         <div style={{ display: 'flex', fontSize: 40, marginBottom: 24 }}>🎤🇩🇪🇳🇱🇬🇧🇵🇹🇫🇷🇸🇪</div>
         <div style={{ display: 'flex', fontSize: 64, fontWeight: 700, lineHeight: 1.1 }}>
-          Simulador de Entrevista
+          Vagas Remotas
         </div>
         <div style={{ display: 'flex', fontSize: 64, fontWeight: 700, lineHeight: 1.1, color: '#a1a1aa' }}>
-          para a Europa
+          / Relocation
         </div>
         <div style={{ display: 'flex', fontSize: 30, marginTop: 32, color: '#d4d4d8', maxWidth: 900 }}>
           Treine no estilo real de cada país, adaptado à sua profissão em TI. Revisão de currículo incluída.
