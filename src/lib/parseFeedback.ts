@@ -18,14 +18,27 @@ export interface ParsedFeedback {
   modelAnswer: string
 }
 
-const SECTION_HEADERS = [
-  'PONTOS FORTES',
-  'PONTOS A MELHORAR',
-  'ESTRUTURA DA RESPOSTA (STAR)',
-  'O QUE O RECRUTADOR QUER OUVIR',
-  'INGLÊS — CORREÇÕES E MELHORIAS',
-  'RESPOSTA MODELO',
-] as const
+// Headers matched loosely (see normalizeLine) so a stray "## " or "**" the model
+// sometimes adds even when told to use plain fixed headers doesn't defeat matching.
+// The English-corrections header specifically tolerates -, – or — as the separator.
+const SECTION_HEADERS: [RegExp, string][] = [
+  [/^PONTOS FORTES/, 'PONTOS FORTES'],
+  [/^PONTOS A MELHORAR/, 'PONTOS A MELHORAR'],
+  [/^ESTRUTURA DA RESPOSTA \(STAR\)/, 'ESTRUTURA DA RESPOSTA (STAR)'],
+  [/^O QUE O RECRUTADOR QUER OUVIR/, 'O QUE O RECRUTADOR QUER OUVIR'],
+  [/^INGL[ÊE]S\s*[-–—]\s*CORRE[ÇC][ÕO]ES E MELHORIAS/, 'INGLÊS — CORREÇÕES E MELHORIAS'],
+  [/^RESPOSTA MODELO/, 'RESPOSTA MODELO'],
+]
+
+function stripBold(text: string): string {
+  return text.replace(/\*\*/g, '')
+}
+
+/** Strips markdown heading markers (#, ##, ...) and bold wrapping the model sometimes adds
+ *  even when told to use plain fixed headers, so header matching isn't defeated by them. */
+function normalizeLine(line: string): string {
+  return stripBold(line.trim().replace(/^#+\s*/, ''))
+}
 
 function splitSections(feedback: string): { notaLine: string; sections: Record<string, string> } {
   const lines = feedback.split('\n')
@@ -33,10 +46,10 @@ function splitSections(feedback: string): { notaLine: string; sections: Record<s
   const starts: { key: string; index: number }[] = []
 
   lines.forEach((line, i) => {
-    const trimmed = line.trim()
+    const trimmed = normalizeLine(line)
     if (trimmed.startsWith('NOTA:')) notaLine = trimmed
-    for (const key of SECTION_HEADERS) {
-      if (trimmed.startsWith(key)) starts.push({ key, index: i })
+    for (const [re, key] of SECTION_HEADERS) {
+      if (re.test(trimmed)) starts.push({ key, index: i })
     }
   })
 
@@ -50,24 +63,20 @@ function splitSections(feedback: string): { notaLine: string; sections: Record<s
 }
 
 function parseNota(notaLine: string): { score: number | null; band: string } {
-  // e.g. "NOTA: 7,3 — Atende bem (clara, estruturada...)" or "NOTA: 9/10 — Excede expectativas"
+  // e.g. "NOTA: 7,3 — Atende bem (clara, estruturada...)" or "NOTA: 9/10 - Excede expectativas"
   const scoreMatch = notaLine.match(/NOTA:\s*([\d]+(?:[.,]\d+)?)/i)
   const score = scoreMatch ? parseFloat(scoreMatch[1].replace(',', '.')) : null
-  const bandMatch = notaLine.match(/—\s*(.+)$/)
+  const bandMatch = notaLine.match(/[-–—]\s*(.+)$/)
   const band = bandMatch ? bandMatch[1].trim() : ''
   return { score, band }
-}
-
-function stripBold(text: string): string {
-  return text.replace(/\*\*/g, '')
 }
 
 function extractBullets(body: string): string[] {
   return body
     .split('\n')
-    .map(l => l.trim())
-    .filter(l => l.startsWith('- '))
-    .map(l => stripBold(l.slice(2).trim()))
+    .map(l => normalizeLine(l))
+    .filter(l => /^[-*•]\s/.test(l))
+    .map(l => l.replace(/^[-*•]\s*/, '').trim())
     .filter(Boolean)
 }
 
@@ -81,9 +90,9 @@ const STAR_LABELS: [RegExp, string][] = [
 function extractStarItems(body: string): StarItem[] {
   const items: StarItem[] = []
   for (const rawLine of body.split('\n')) {
-    const line = rawLine.trim()
-    if (!line.startsWith('-')) continue
-    const content = stripBold(line.replace(/^-\s*/, ''))
+    const line = normalizeLine(rawLine)
+    if (!/^[-*•]\s/.test(line)) continue
+    const content = line.replace(/^[-*•]\s*/, '')
     for (const [re, label] of STAR_LABELS) {
       if (re.test(content)) {
         const status: StarStatus = /aus[eê]nte/i.test(content)

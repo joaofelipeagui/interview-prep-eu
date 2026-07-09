@@ -5,10 +5,13 @@ import { COUNTRIES, type CountryId } from '@/lib/countries'
 import { PROFESSIONS, type ProfessionId, isProfessionComplete } from '@/lib/professions'
 import { generateFeedbackPDF } from '@/lib/pdf'
 import FeedbackCard from '@/components/FeedbackCard'
+import PlansPanel, { type VerifiedSubscription } from '@/components/PlansPanel'
+import CvReviewPanel from '@/components/CvReviewPanel'
 import { Loader2, ArrowRight, RotateCcw, Mic, Square, Download } from 'lucide-react'
 
 type Stage = 'select' | 'question' | 'evaluating' | 'feedback'
 type LimitScope = 'person' | 'global'
+type Mode = 'interview' | 'cv'
 
 interface MinimalSpeechRecognitionResult {
   isFinal: boolean
@@ -44,6 +47,8 @@ function getSpeechRecognitionCtor(): SpeechRecognitionConstructor | null {
 
 const CLIENT_ID_KEY = 'interview_prep_client_id'
 const CONSENT_KEY = 'interview_prep_consent'
+const USER_EMAIL_KEY = 'interview_prep_user_email'
+const PENDING_EMAIL_KEY = 'interview_prep_pending_email'
 
 function getOrCreateClientId(): string {
   let id = localStorage.getItem(CLIENT_ID_KEY)
@@ -67,9 +72,19 @@ function countFillerWords(text: string): number {
   return count
 }
 
+interface Subscription {
+  email: string
+  active: boolean
+  plan?: string
+  paidUntil?: string
+}
+
 export default function Home() {
   const [consentGiven, setConsentGiven] = useState(false)
   const [consentChecked, setConsentChecked] = useState(false)
+  const [mode, setMode] = useState<Mode>('interview')
+  const [subscription, setSubscription] = useState<Subscription | null>(null)
+  const [checkoutBanner, setCheckoutBanner] = useState('')
   const [stage, setStage] = useState<Stage>('select')
   const [professionId, setProfessionId] = useState<ProfessionId>('management')
   const [customProfession, setCustomProfession] = useState('')
@@ -86,9 +101,6 @@ export default function Home() {
   const [paceWpm, setPaceWpm] = useState<number | null>(null)
   const [fillerWordCount, setFillerWordCount] = useState<number | null>(null)
   const [limitScope, setLimitScope] = useState<LimitScope | null>(null)
-  const [leadEmail, setLeadEmail] = useState('')
-  const [leadSubmitting, setLeadSubmitting] = useState(false)
-  const [leadSubmitted, setLeadSubmitted] = useState(false)
 
   const recognitionRef = useRef<MinimalSpeechRecognition | null>(null)
   const baseAnswerRef = useRef('')
@@ -97,12 +109,41 @@ export default function Home() {
   const recordStartRef = useRef(0)
   const requestIdRef = useRef(0)
 
+  async function checkSubscription(email: string): Promise<Subscription> {
+    const res = await fetch(`/api/subscription?email=${encodeURIComponent(email)}`)
+    const data = await res.json()
+    return { email, active: Boolean(data.active), plan: data.plan, paidUntil: data.paidUntil }
+  }
+
   useEffect(() => {
     // Feature detection / localStorage reads need `window`, so they can only run post-mount —
     // this intentionally differs from the false-during-SSR initial render.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setSpeechSupported(!!getSpeechRecognitionCtor())
     setConsentGiven(localStorage.getItem(CONSENT_KEY) === 'true')
+
+    const params = new URLSearchParams(window.location.search)
+    const checkoutStatus = params.get('checkout')
+    const pendingEmail = localStorage.getItem(PENDING_EMAIL_KEY)
+    const knownEmail = localStorage.getItem(USER_EMAIL_KEY) ?? pendingEmail
+
+    if (knownEmail) {
+      checkSubscription(knownEmail).then(sub => {
+        setSubscription(sub)
+        if (sub.active) {
+          localStorage.setItem(USER_EMAIL_KEY, knownEmail)
+          localStorage.removeItem(PENDING_EMAIL_KEY)
+        }
+        if (checkoutStatus === 'success') {
+          setCheckoutBanner(sub.active
+            ? 'Pagamento confirmado! Seu acesso já está liberado.'
+            : 'Pagamento recebido — pode levar alguns segundos para confirmar. Clique em "Verificar acesso" daqui a pouco se ainda não liberou.')
+        }
+      })
+    } else if (checkoutStatus === 'success') {
+      setCheckoutBanner('Pagamento recebido! Se você informou seu e-mail na compra, verifique o acesso abaixo.')
+    }
+
     return () => {
       recognitionRef.current?.stop()
     }
@@ -112,6 +153,14 @@ export default function Home() {
     if (!consentChecked) return
     localStorage.setItem(CONSENT_KEY, 'true')
     setConsentGiven(true)
+  }
+
+  function handleSubscriptionVerified(email: string, sub: VerifiedSubscription) {
+    localStorage.setItem(USER_EMAIL_KEY, email)
+    localStorage.removeItem(PENDING_EMAIL_KEY)
+    setSubscription({ email, active: sub.active, plan: sub.plan, paidUntil: sub.paidUntil })
+    setLimitScope(null)
+    setCheckoutBanner('')
   }
 
   function toggleRecording() {
@@ -176,6 +225,13 @@ export default function Home() {
   const country = COUNTRIES.find(c => c.id === countryId)
   const profession = PROFESSIONS.find(p => p.id === professionId)
   const professionReady = isProfessionComplete(professionId, customProfession)
+  const subscribed = subscription?.active === true
+
+  function authHeaders(): Record<string, string> {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json', 'x-client-id': getOrCreateClientId() }
+    if (subscribed && subscription) headers['x-user-email'] = subscription.email
+    return headers
+  }
 
   async function startInterview(id: CountryId) {
     setCountryId(id)
@@ -190,7 +246,7 @@ export default function Home() {
     try {
       const res = await fetch('/api/interview', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-client-id': getOrCreateClientId() },
+        headers: authHeaders(),
         body: JSON.stringify({ type: 'question', payload: { countryId: id, professionId, customProfession, askedSoFar: asked } }),
       })
       const data = await res.json()
@@ -227,7 +283,7 @@ export default function Home() {
     try {
       const res = await fetch('/api/interview', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-client-id': getOrCreateClientId() },
+        headers: authHeaders(),
         body: JSON.stringify({ type: 'evaluate', payload: { countryId, professionId, customProfession, question, answer, paceWpm, fillerWordCount } }),
       })
       const data = await res.json()
@@ -247,21 +303,6 @@ export default function Home() {
       }
     } finally {
       if (myRequestId === requestIdRef.current) setLoading(false)
-    }
-  }
-
-  async function submitLead() {
-    if (!leadEmail.trim()) return
-    setLeadSubmitting(true)
-    try {
-      await fetch('/api/interview', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'lead', payload: { email: leadEmail.trim() } }),
-      })
-    } finally {
-      setLeadSubmitted(true)
-      setLeadSubmitting(false)
     }
   }
 
@@ -317,7 +358,7 @@ export default function Home() {
                 <li>Suas respostas (texto e transcrição de voz) são enviadas para a API da Anthropic apenas para gerar o feedback desta sessão — não são usadas para treinar modelos de IA.</li>
                 <li>Se você usar &ldquo;Responder falando&rdquo;, o áudio é processado pelo próprio navegador (Web Speech API); nenhum áudio é enviado a servidores, só o texto transcrito.</li>
                 <li>Guardamos um identificador anônimo do seu navegador e o IP apenas para controlar o limite de testes gratuitos — não identificamos você pessoalmente com isso.</li>
-                <li>Se você deixar seu e-mail (caso o limite gratuito seja atingido), ele é usado só para avisos sobre esta ferramenta. Nunca é vendido ou compartilhado com terceiros.</li>
+                <li>Se você comprar acesso, seu e-mail é usado só para liberar e verificar sua compra. Nunca é vendido ou compartilhado com terceiros.</li>
               </ul>
               <label className="flex items-start gap-2 text-sm text-black dark:text-zinc-50 cursor-pointer">
                 <input
@@ -338,45 +379,55 @@ export default function Home() {
             </div>
           ) : (
             <>
+              <div className="flex justify-center gap-2 mb-6">
+                <button
+                  onClick={() => setMode('interview')}
+                  className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+                    mode === 'interview' ? 'bg-black dark:bg-white text-white dark:text-black' : 'text-zinc-500 hover:text-black dark:hover:text-white'
+                  }`}
+                >
+                  🎤 Simulador de Entrevista
+                </button>
+                <button
+                  onClick={() => setMode('cv')}
+                  className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+                    mode === 'cv' ? 'bg-black dark:bg-white text-white dark:text-black' : 'text-zinc-500 hover:text-black dark:hover:text-white'
+                  }`}
+                >
+                  📄 Revisão de Currículo
+                </button>
+              </div>
+
+              {checkoutBanner && (
+                <div className="mb-6 rounded-lg border border-blue-300 bg-blue-50 px-4 py-3 text-sm text-blue-700 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-300">
+                  {checkoutBanner}
+                </div>
+              )}
+
               {error && (
                 <div className="mb-6 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
                   {error}
                 </div>
               )}
 
-              {limitScope ? (
-                <div className="space-y-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 p-6 text-center">
-                  <div className="text-lg font-medium text-black dark:text-zinc-50">
-                    {limitScope === 'person'
-                      ? 'Você já usou sua avaliação gratuita neste teste'
-                      : 'Chegamos ao limite de testes gratuitos de hoje'}
-                  </div>
-                  <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                    {limitScope === 'person'
-                      ? 'Deixe seu e-mail e eu aviso quando abrir mais vagas ou lançar a mentoria completa.'
-                      : 'A demanda foi maior do que eu esperava! Deixe seu e-mail que eu aviso assim que reabrir.'}
-                  </p>
-                  {leadSubmitted ? (
-                    <p className="text-sm text-green-600 dark:text-green-400">Combinado — vou te avisar. Obrigado pelo interesse!</p>
-                  ) : (
-                    <div className="flex flex-col sm:flex-row gap-2 justify-center">
-                      <input
-                        type="email"
-                        value={leadEmail}
-                        onChange={e => setLeadEmail(e.target.value)}
-                        placeholder="seu@email.com"
-                        className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-black dark:text-zinc-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-400"
-                      />
-                      <button
-                        onClick={submitLead}
-                        disabled={leadSubmitting || !leadEmail.trim()}
-                        className="inline-flex items-center justify-center gap-2 rounded-lg bg-black dark:bg-white text-white dark:text-black px-4 py-2 text-sm font-medium disabled:opacity-40"
-                      >
-                        Avisar quando abrir
-                      </button>
-                    </div>
-                  )}
-                </div>
+              {mode === 'cv' ? (
+                subscribed ? (
+                  <CvReviewPanel userEmail={subscription!.email} />
+                ) : (
+                  <PlansPanel
+                    title="Revisão de currículo é um recurso pago"
+                    subtitle="Escolha um plano pra desbloquear a revisão de currículo e o simulador de entrevista ilimitado."
+                    knownEmail={subscription?.email}
+                    onVerified={handleSubscriptionVerified}
+                  />
+                )
+              ) : limitScope ? (
+                <PlansPanel
+                  title={limitScope === 'person' ? 'Você já usou sua avaliação gratuita neste teste' : 'Chegamos ao limite de testes gratuitos de hoje'}
+                  subtitle="Escolha um plano pra continuar praticando sem limite, e desbloquear a revisão de currículo."
+                  knownEmail={subscription?.email}
+                  onVerified={handleSubscriptionVerified}
+                />
               ) : (
                 <>
                   {stage === 'select' && (
@@ -440,6 +491,11 @@ export default function Home() {
                           <span className="inline-flex items-center gap-2 rounded-full border border-zinc-200 dark:border-zinc-800 px-3 py-1 text-sm text-black dark:text-zinc-50">
                             {profession?.flag} {professionId === 'other' ? customProfession : profession?.label}
                           </span>
+                          {subscribed && (
+                            <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 px-3 py-1 text-sm">
+                              ✓ acesso ilimitado
+                            </span>
+                          )}
                         </div>
                         <button
                           onClick={reset}

@@ -10,6 +10,7 @@ import {
   isGlobalEvaluateCapReached,
   recordLead,
 } from '@/lib/usageStore'
+import { getActiveSubscription } from '@/lib/subscriptions'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -44,6 +45,14 @@ function requireClientId(req: NextRequest): string {
   return clientId
 }
 
+/** Paying subscribers (verified by an active, non-expired plan tied to their email) skip the free-tier gates entirely. */
+async function hasActiveSubscription(req: NextRequest): Promise<boolean> {
+  const email = req.headers.get('x-user-email')
+  if (!email || !EMAIL_PATTERN.test(email.trim())) return false
+  const sub = await getActiveSubscription(email.trim().toLowerCase())
+  return sub !== null
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { type, payload } = await req.json()
@@ -61,15 +70,18 @@ export async function POST(req: NextRequest) {
       const { countryId, professionId, customProfession, askedSoFar } = payload
       const ip = clientIp(req)
       const clientId = requireClientId(req)
+      const subscribed = await hasActiveSubscription(req)
 
-      if (await hasPersonAlreadyUsedAttempt(ip, clientId)) {
-        return NextResponse.json({ error: 'limit_reached', scope: 'person' }, { status: 429 })
-      }
-      if (await isGlobalEvaluateCapReached()) {
-        return NextResponse.json({ error: 'limit_reached', scope: 'global' }, { status: 429 })
-      }
-      if (!(await checkAndRecordQuestionAttempt())) {
-        return NextResponse.json({ error: 'limit_reached', scope: 'global' }, { status: 429 })
+      if (!subscribed) {
+        if (await hasPersonAlreadyUsedAttempt(ip, clientId)) {
+          return NextResponse.json({ error: 'limit_reached', scope: 'person' }, { status: 429 })
+        }
+        if (await isGlobalEvaluateCapReached()) {
+          return NextResponse.json({ error: 'limit_reached', scope: 'global' }, { status: 429 })
+        }
+        if (!(await checkAndRecordQuestionAttempt())) {
+          return NextResponse.json({ error: 'limit_reached', scope: 'global' }, { status: 429 })
+        }
       }
 
       const country = getCountry(countryId)
@@ -97,10 +109,13 @@ export async function POST(req: NextRequest) {
       const { countryId, professionId, customProfession, question, answer, paceWpm, fillerWordCount } = payload
       const ip = clientIp(req)
       const clientId = requireClientId(req)
+      const subscribed = await hasActiveSubscription(req)
 
-      const usageResult = await checkAndRecordEvaluateAttempt(ip, clientId)
-      if (!usageResult.allowed) {
-        return NextResponse.json({ error: 'limit_reached', scope: usageResult.scope }, { status: 429 })
+      if (!subscribed) {
+        const usageResult = await checkAndRecordEvaluateAttempt(ip, clientId)
+        if (!usageResult.allowed) {
+          return NextResponse.json({ error: 'limit_reached', scope: usageResult.scope }, { status: 429 })
+        }
       }
 
       const country = getCountry(countryId)
