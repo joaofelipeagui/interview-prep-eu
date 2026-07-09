@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { COUNTRIES, type CountryId } from '@/lib/countries'
-import { PROFESSIONS, type ProfessionId, isProfessionComplete } from '@/lib/professions'
+import { groupProfessions, type ProfessionId, isProfessionComplete } from '@/lib/professions'
 import CvFeedbackCard from './CvFeedbackCard'
 import { Loader2, ArrowRight, RotateCcw } from 'lucide-react'
 
@@ -70,19 +70,28 @@ export default function CvReviewPanel({ userEmail }: { userEmail: string }) {
 
       <div>
         <div className="text-xs uppercase tracking-wide text-zinc-500 mb-3">1. Sua profissão</div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {PROFESSIONS.map(p => (
-            <button
-              key={p.id}
-              onClick={() => setProfessionId(p.id)}
-              className={`text-left rounded-xl border p-4 transition-colors bg-white dark:bg-zinc-950 ${
-                professionId === p.id
-                  ? 'border-black dark:border-white'
-                  : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-600'
-              }`}
-            >
-              <div className="text-base font-medium text-black dark:text-zinc-50">{p.flag} {p.label}</div>
-            </button>
+        <div className="space-y-4">
+          {groupProfessions().map(group => (
+            <div key={group.category ?? 'other'}>
+              {group.category && (
+                <div className="text-[11px] uppercase tracking-wide text-zinc-400 dark:text-zinc-500 mb-2">{group.category}</div>
+              )}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {group.items.map(p => (
+                  <button
+                    key={p.id}
+                    onClick={() => setProfessionId(p.id)}
+                    className={`text-left rounded-xl border p-4 transition-colors bg-white dark:bg-zinc-950 ${
+                      professionId === p.id
+                        ? 'border-black dark:border-white'
+                        : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-600'
+                    }`}
+                  >
+                    <div className="text-base font-medium text-black dark:text-zinc-50">{p.flag} {p.label}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
           ))}
         </div>
         {professionId === 'other' && (
