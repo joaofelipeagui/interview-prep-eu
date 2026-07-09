@@ -7,6 +7,7 @@ import { LookupError, ValidationError } from '@/lib/errors'
 import { getActiveSubscription } from '@/lib/subscriptions'
 import { checkAndRecordCvAttempt } from '@/lib/usageStore'
 import { recordFreeCvUsed } from '@/lib/analyticsStore'
+import { extractTextFromFile } from '@/lib/extractCvText'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -47,15 +48,29 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const { cvText, countryId, professionId, customProfession } = await req.json()
+    const formData = await req.formData()
+    const countryId = formData.get('countryId')
+    const professionId = formData.get('professionId')
+    const customProfession = formData.get('customProfession')
+    const file = formData.get('file')
+    const pastedText = formData.get('cvText')
 
-    if (typeof cvText !== 'string' || !cvText.trim()) {
-      throw new ValidationError('cvText is required')
+    if (typeof countryId !== 'string' || typeof professionId !== 'string') {
+      throw new ValidationError('countryId and professionId are required')
     }
-    const trimmedCv = cvText.trim().slice(0, MAX_CV_CHARS)
+
+    let cvText: string
+    if (file instanceof File && file.size > 0) {
+      cvText = await extractTextFromFile(file)
+    } else if (typeof pastedText === 'string' && pastedText.trim()) {
+      cvText = pastedText.trim()
+    } else {
+      throw new ValidationError('cvText or file is required')
+    }
+    const trimmedCv = cvText.slice(0, MAX_CV_CHARS)
 
     const country = getCountry(countryId)
-    const roleContext = buildRoleContext(professionId, customProfession)
+    const roleContext = buildRoleContext(professionId, typeof customProfession === 'string' ? customProfession : undefined)
 
     const msg = await client.messages.create({
       model: 'claude-sonnet-4-6',

@@ -6,7 +6,7 @@ import { groupProfessions, type ProfessionId, isProfessionComplete } from '@/lib
 import { getOrCreateClientId } from '@/lib/clientId'
 import CvFeedbackCard from './CvFeedbackCard'
 import PlansPanel, { type VerifiedSubscription } from './PlansPanel'
-import { Loader2, ArrowRight, RotateCcw } from 'lucide-react'
+import { Loader2, ArrowRight, RotateCcw, Upload, X, FileText } from 'lucide-react'
 
 interface BlockedState {
   title: string
@@ -24,6 +24,7 @@ export default function CvReviewPanel({
   const [customProfession, setCustomProfession] = useState('')
   const [countryId, setCountryId] = useState<CountryId | null>(null)
   const [cvText, setCvText] = useState('')
+  const [cvFile, setCvFile] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [feedback, setFeedback] = useState('')
@@ -31,19 +32,35 @@ export default function CvReviewPanel({
 
   const country = COUNTRIES.find(c => c.id === countryId)
   const professionReady = isProfessionComplete(professionId, customProfession)
-  const canSubmit = professionReady && countryId && cvText.trim().length > 100
+  const canSubmit = professionReady && countryId && (cvFile !== null || cvText.trim().length > 100)
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setError('')
+    setCvFile(file)
+    setCvText('')
+  }
 
   async function submit() {
     if (!canSubmit) return
     setLoading(true)
     setError('')
     try {
-      const headers: Record<string, string> = { 'Content-Type': 'application/json', 'x-client-id': getOrCreateClientId() }
+      const body = new FormData()
+      if (cvFile) body.append('file', cvFile)
+      else body.append('cvText', cvText)
+      body.append('countryId', countryId as string)
+      body.append('professionId', professionId)
+      if (customProfession) body.append('customProfession', customProfession)
+
+      const headers: Record<string, string> = { 'x-client-id': getOrCreateClientId() }
       if (userEmail) headers['x-user-email'] = userEmail
       const res = await fetch('/api/cv-review', {
         method: 'POST',
         headers,
-        body: JSON.stringify({ cvText, countryId, professionId, customProfession }),
+        body,
       })
       const data = await res.json()
       if (res.status === 429 && (data.scope === 'person' || data.scope === 'global')) {
@@ -65,6 +82,8 @@ export default function CvReviewPanel({
   function reset() {
     setFeedback('')
     setError('')
+    setCvFile(null)
+    setCvText('')
   }
 
   if (blocked) {
@@ -151,14 +170,32 @@ export default function CvReviewPanel({
       </div>
 
       <div>
-        <div className="text-xs uppercase tracking-wide text-zinc-500 mb-3">3. Cole seu currículo</div>
-        <textarea
-          value={cvText}
-          onChange={e => setCvText(e.target.value)}
-          placeholder="Cole o texto do seu currículo aqui..."
-          rows={10}
-          className="w-full rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-black dark:text-zinc-50 p-4 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-400 resize-none"
-        />
+        <div className="text-xs uppercase tracking-wide text-zinc-500 mb-3">3. Seu currículo</div>
+
+        <label className="inline-flex items-center gap-2 cursor-pointer rounded-lg border border-zinc-200 dark:border-zinc-800 px-3 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:border-zinc-400 dark:hover:border-zinc-600 transition-colors">
+          <Upload size={14} />
+          Enviar PDF ou Word (.docx)
+          <input type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={handleFileChange} className="hidden" />
+        </label>
+
+        {cvFile ? (
+          <div className="mt-3 flex items-center justify-between rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 px-3 py-2 text-sm">
+            <span className="inline-flex items-center gap-2 text-black dark:text-zinc-50 truncate">
+              <FileText size={14} className="shrink-0" /> {cvFile.name}
+            </span>
+            <button onClick={() => setCvFile(null)} className="text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 shrink-0">
+              <X size={14} />
+            </button>
+          </div>
+        ) : (
+          <textarea
+            value={cvText}
+            onChange={e => setCvText(e.target.value)}
+            placeholder="...ou cole o texto do seu currículo aqui"
+            rows={10}
+            className="mt-3 w-full rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-black dark:text-zinc-50 p-4 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-400 resize-none"
+          />
+        )}
       </div>
 
       <button
