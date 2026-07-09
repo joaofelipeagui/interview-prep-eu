@@ -11,6 +11,11 @@ export type ProfessionId =
   | 'business_analyst'
   | 'qa_engineer'
   | 'ml_engineer'
+  | 'sap_consultant'
+  | 'dba'
+  | 'mobile_developer'
+  | 'it_audit'
+  | 'scrum_master'
   | 'tech_lead'
   | 'engineering_manager'
   | 'solutions_architect'
@@ -22,6 +27,7 @@ export type ProfessionId =
   | 'infra_director'
   | 'data_director'
   | 'security_director'
+  | 'vp_engineering'
   | 'other'
 
 /** Groups roles in the UI picker — purely presentational, does not affect the prompt. */
@@ -94,6 +100,34 @@ export const PROFESSIONS: Profession[] = [
     domainContext: 'Machine Learning Engineer or AI Engineer roles — model training and evaluation, deploying and monitoring ML models in production (MLOps), feature engineering, model performance and drift monitoring, working with data scientists to productionize research, LLM/generative AI integration',
   },
   {
+    id: 'sap_consultant',
+    label: 'Consultor SAP / Salesforce / ERP',
+    flag: '🧾',
+    category: 'Execução técnica',
+    domainContext: 'SAP, Salesforce, or ERP Functional/Technical Consultant roles — business process configuration, module implementation (e.g. SAP FI/CO/MM/SD or Salesforce Sales/Service Cloud), requirements-to-configuration mapping, client workshops, go-live support, integration between ERP/CRM modules and legacy systems',
+  },
+  {
+    id: 'dba',
+    label: 'DBA (Administrador de Banco de Dados)',
+    flag: '🗃️',
+    category: 'Execução técnica',
+    domainContext: 'Database Administrator (DBA) roles — database performance tuning, backup and disaster recovery, replication and high availability, capacity planning, security and access control, migrations between database engines (SQL Server, Oracle, PostgreSQL, MySQL)',
+  },
+  {
+    id: 'mobile_developer',
+    label: 'Desenvolvedor Mobile (iOS/Android)',
+    flag: '📱',
+    category: 'Execução técnica',
+    domainContext: 'Mobile Developer roles (iOS, Android, or cross-platform with React Native/Flutter) — native and cross-platform app architecture, app store release cycles, offline-first design, performance and battery optimization, mobile-specific testing and CI/CD',
+  },
+  {
+    id: 'it_audit',
+    label: 'Auditoria de TI / GRC',
+    flag: '⚖️',
+    category: 'Execução técnica',
+    domainContext: 'IT Audit or GRC (Governance, Risk & Compliance) Analyst roles — IT controls testing and audit planning, risk assessment frameworks, regulatory compliance (SOX, GDPR, ISO 27001), evidence gathering and audit reporting, working with business and technical teams to remediate findings',
+  },
+  {
     id: 'management',
     label: 'Gestão de Projetos / Programas',
     flag: '📋',
@@ -106,6 +140,13 @@ export const PROFESSIONS: Profession[] = [
     flag: '🚀',
     category: 'Gestão',
     domainContext: 'Product Manager or Product Owner roles — product strategy and vision, user research and discovery, prioritization frameworks (RICE, MoSCoW), defining and tracking success metrics/OKRs, working with design and engineering to ship features, stakeholder alignment on product direction',
+  },
+  {
+    id: 'scrum_master',
+    label: 'Scrum Master / Agile Coach',
+    flag: '🔄',
+    category: 'Gestão',
+    domainContext: 'Scrum Master or Agile Coach roles — facilitating Scrum/Kanban ceremonies, removing team blockers, coaching teams and stakeholders on agile practices, tracking velocity and delivery health, driving continuous improvement, balancing process rigor with team autonomy',
   },
   {
     id: 'tech_lead',
@@ -183,6 +224,13 @@ export const PROFESSIONS: Profession[] = [
     flag: '🔐',
     category: 'Diretoria / Liderança sênior',
     domainContext: 'Director of Security / CISO roles — security strategy and risk governance at board level, budget ownership for security programs, regulatory compliance accountability (GDPR, NIS2), incident response leadership during breaches, building and scaling security teams, translating technical risk into business risk for executives',
+  },
+  {
+    id: 'vp_engineering',
+    label: 'CTO / VP de Engenharia',
+    flag: '👔',
+    category: 'Diretoria / Liderança sênior',
+    domainContext: 'CTO or VP of Engineering roles — company-wide technology vision and strategy, board and investor communication, org-wide engineering culture and standards, build-vs-buy decisions at the highest level, technology risk ownership, representing engineering in executive/founder-level decisions',
   },
   {
     id: 'other',
