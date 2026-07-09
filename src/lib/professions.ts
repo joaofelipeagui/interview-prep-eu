@@ -2,9 +2,14 @@ import { LookupError } from './errors'
 
 export type ProfessionId =
   | 'management'
+  | 'product_manager'
   | 'networks'
   | 'data'
   | 'software'
+  | 'security'
+  | 'devops_sre'
+  | 'tech_lead'
+  | 'engineering_manager'
   | 'solutions_architect'
   | 'software_architect'
   | 'infra_architect'
@@ -13,10 +18,11 @@ export type ProfessionId =
   | 'engineering_director'
   | 'infra_director'
   | 'data_director'
+  | 'security_director'
   | 'other'
 
 /** Groups roles in the UI picker — purely presentational, does not affect the prompt. */
-export type ProfessionCategory = 'Execução técnica' | 'Gestão' | 'Arquitetura' | 'Diretoria / Liderança sênior' | null
+export type ProfessionCategory = 'Execução técnica' | 'Gestão' | 'Liderança técnica' | 'Arquitetura' | 'Diretoria / Liderança sênior' | null
 
 export interface Profession {
   id: ProfessionId
@@ -50,11 +56,46 @@ export const PROFESSIONS: Profession[] = [
     domainContext: 'Software Engineer or Developer roles — backend/frontend systems, APIs, code architecture, testing, CI/CD, debugging production issues, code review',
   },
   {
+    id: 'security',
+    label: 'Segurança da Informação / Cibersegurança',
+    flag: '🛡️',
+    category: 'Execução técnica',
+    domainContext: 'Information Security Analyst, Security Engineer, or Cybersecurity Analyst roles — threat detection and incident response, vulnerability management, security tooling (SIEM, IDS/IPS), compliance frameworks (ISO 27001, GDPR, NIS2), security awareness and risk assessment',
+  },
+  {
+    id: 'devops_sre',
+    label: 'DevOps / SRE / Cloud Engineering',
+    flag: '♾️',
+    category: 'Execução técnica',
+    domainContext: 'DevOps Engineer, Site Reliability Engineer (SRE), or Cloud Engineer roles — CI/CD pipelines, infrastructure as code (Terraform, Ansible), container orchestration (Kubernetes, Docker), observability and on-call incident response, reliability and uptime (SLOs/error budgets), cloud cost optimization',
+  },
+  {
     id: 'management',
-    label: 'Gestão de Projetos / Programas / Produtos',
+    label: 'Gestão de Projetos / Programas',
     flag: '📋',
     category: 'Gestão',
-    domainContext: 'Program Manager, Project Manager, or Product Manager roles — cross-functional delivery, stakeholder management, roadmaps, prioritization, budget and risk management, vendor coordination',
+    domainContext: 'Program Manager or Project Manager roles — cross-functional delivery, stakeholder management, timelines and milestones, budget and risk management, vendor and cross-team coordination',
+  },
+  {
+    id: 'product_manager',
+    label: 'Product Manager / Product Owner',
+    flag: '🚀',
+    category: 'Gestão',
+    domainContext: 'Product Manager or Product Owner roles — product strategy and vision, user research and discovery, prioritization frameworks (RICE, MoSCoW), defining and tracking success metrics/OKRs, working with design and engineering to ship features, stakeholder alignment on product direction',
+  },
+  {
+    id: 'tech_lead',
+    label: 'Tech Lead',
+    flag: '🧭',
+    category: 'Liderança técnica',
+    domainContext: 'Tech Lead roles — hands-on technical leadership of a small engineering team, making and defending architecture decisions day-to-day, code review and mentoring, balancing individual contribution with unblocking teammates, translating product requirements into technical plans',
+  },
+  {
+    id: 'engineering_manager',
+    label: 'Gerente de Engenharia',
+    flag: '👥',
+    category: 'Liderança técnica',
+    domainContext: 'Engineering Manager roles — people management (1:1s, performance, career growth), hiring and team building, sprint/delivery accountability without necessarily writing code day-to-day, balancing technical debt against roadmap pressure, being the bridge between individual contributors and senior leadership',
   },
   {
     id: 'solutions_architect',
@@ -111,6 +152,13 @@ export const PROFESSIONS: Profession[] = [
     flag: '📈',
     category: 'Diretoria / Liderança sênior',
     domainContext: 'Director of Data / Head of Data & Analytics roles — data strategy and platform vision, building and scaling data teams, data governance and privacy accountability, demonstrating ROI of data initiatives to the business, balancing centralized vs federated data ownership',
+  },
+  {
+    id: 'security_director',
+    label: 'Diretor de Segurança / CISO',
+    flag: '🔐',
+    category: 'Diretoria / Liderança sênior',
+    domainContext: 'Director of Security / CISO roles — security strategy and risk governance at board level, budget ownership for security programs, regulatory compliance accountability (GDPR, NIS2), incident response leadership during breaches, building and scaling security teams, translating technical risk into business risk for executives',
   },
   {
     id: 'other',
