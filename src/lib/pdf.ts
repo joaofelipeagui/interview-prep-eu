@@ -1,4 +1,5 @@
 import { jsPDF } from 'jspdf'
+import { parseCvFeedback } from './parseCvFeedback'
 
 interface FeedbackPdfInput {
   countryLabel: string
@@ -110,4 +111,69 @@ export function generateFeedbackPDF({ countryLabel, professionLabel, question, f
 
   const countryFile = countryLabel.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\w]+/g, '-').toLowerCase()
   doc.save(`feedback-entrevista-${countryFile}-${Date.now()}.pdf`)
+}
+
+interface CvFeedbackPdfInput {
+  countryLabel: string
+  professionLabel: string
+  feedback: string
+}
+
+export function generateCvFeedbackPDF({ countryLabel, professionLabel, feedback }: CvFeedbackPdfInput) {
+  const parsed = parseCvFeedback(feedback)
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' })
+  let y = MARGIN
+
+  function ensureSpace(needed: number) {
+    if (y + needed > PAGE_BOTTOM) {
+      doc.addPage()
+      y = MARGIN
+    }
+  }
+
+  function writeWrapped(text: string, opts: { size?: number; bold?: boolean; indent?: number; gapAfter?: number } = {}) {
+    const size = opts.size ?? 10.5
+    const indent = opts.indent ?? 0
+    doc.setFont('helvetica', opts.bold ? 'bold' : 'normal')
+    doc.setFontSize(size)
+    const lines: string[] = doc.splitTextToSize(text, CONTENT_WIDTH - indent)
+    for (const line of lines) {
+      ensureSpace(LINE_HEIGHT)
+      doc.text(line, MARGIN + indent, y)
+      y += LINE_HEIGHT
+    }
+    y += opts.gapAfter ?? 0
+  }
+
+  function writeSection(title: string, items: string[]) {
+    if (!items.length) return
+    ensureSpace(LINE_HEIGHT + 4)
+    y += 3
+    writeWrapped(title, { size: 11.5, bold: true, gapAfter: 1.5 })
+    for (const item of items) {
+      writeWrapped(`•  ${item}`, { indent: 3 })
+    }
+  }
+
+  // Header
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(16)
+  doc.text('Revisão de Currículo', MARGIN, y)
+  y += 8
+
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(10)
+  doc.setTextColor(90, 90, 90)
+  const today = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
+  doc.text(`${countryLabel} · ${professionLabel} · ${today}`, MARGIN, y)
+  doc.setTextColor(0, 0, 0)
+  y += 10
+
+  writeSection('PONTOS FORTES', parsed.strengths)
+  writeSection('PONTOS A MELHORAR', parsed.improvements)
+  writeSection(`CONVENÇÕES DE ${countryLabel.toUpperCase()}`, parsed.conventions)
+  writeSection('PALAVRAS-CHAVE E ATS', parsed.atsKeywords)
+
+  const countryFile = countryLabel.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\w]+/g, '-').toLowerCase()
+  doc.save(`revisao-curriculo-${countryFile}-${Date.now()}.pdf`)
 }

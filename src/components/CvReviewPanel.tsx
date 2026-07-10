@@ -4,9 +4,10 @@ import { useState } from 'react'
 import { COUNTRIES, type CountryId } from '@/lib/countries'
 import { PROFESSIONS, groupProfessions, type ProfessionId, isProfessionComplete } from '@/lib/professions'
 import { getOrCreateClientId } from '@/lib/clientId'
+import { generateCvFeedbackPDF } from '@/lib/pdf'
 import CvFeedbackCard from './CvFeedbackCard'
 import PlansPanel, { type VerifiedSubscription } from './PlansPanel'
-import { Loader2, ArrowRight, RotateCcw, Upload, X, FileText, ChevronDown } from 'lucide-react'
+import { Loader2, ArrowRight, RotateCcw, Upload, X, FileText, ChevronDown, Download } from 'lucide-react'
 
 interface BlockedState {
   title: string
@@ -35,8 +36,15 @@ export default function CvReviewPanel({
   })
 
   const country = COUNTRIES.find(c => c.id === countryId)
+  const profession = PROFESSIONS.find(p => p.id === professionId)
+  const professionLabel = professionId === 'other' ? customProfession : (profession?.label ?? '')
   const professionReady = isProfessionComplete(professionId, customProfession)
   const canSubmit = professionReady && countryId && (cvFile !== null || cvText.trim().length > 100)
+
+  function downloadPdf() {
+    if (!country || !feedback) return
+    generateCvFeedbackPDF({ countryLabel: country.label, professionLabel, feedback })
+  }
 
   function toggleCategory(category: string) {
     setExpandedCategories(prev => {
@@ -106,13 +114,21 @@ export default function CvReviewPanel({
   if (feedback) {
     return (
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-2">
           <span className="inline-flex items-center gap-2 rounded-full border border-zinc-200 dark:border-zinc-800 px-3 py-1 text-sm text-black dark:text-zinc-50">
             {country?.flag} {country?.label}
           </span>
-          <button onClick={reset} className="inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200">
-            <RotateCcw size={14} /> revisar outro currículo
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={downloadPdf}
+              className="inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+            >
+              <Download size={14} /> Baixar PDF
+            </button>
+            <button onClick={reset} className="inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200">
+              <RotateCcw size={14} /> revisar outro currículo
+            </button>
+          </div>
         </div>
         <CvFeedbackCard feedback={feedback} countryLabel={country?.label ?? ''} />
       </div>
