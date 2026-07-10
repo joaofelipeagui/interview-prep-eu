@@ -8,7 +8,7 @@ import FeedbackCard from '@/components/FeedbackCard'
 import PlansPanel, { type VerifiedSubscription } from '@/components/PlansPanel'
 import CvReviewPanel from '@/components/CvReviewPanel'
 import { getOrCreateClientId } from '@/lib/clientId'
-import { Loader2, ArrowRight, RotateCcw, Mic, Square, Download } from 'lucide-react'
+import { Loader2, ArrowRight, RotateCcw, Mic, Square, Download, ChevronDown } from 'lucide-react'
 
 type Stage = 'select' | 'question' | 'evaluating' | 'feedback'
 type LimitScope = 'person' | 'global'
@@ -80,6 +80,10 @@ export default function Home() {
   const [professionId, setProfessionId] = useState<ProfessionId>('management')
   const [customProfession, setCustomProfession] = useState('')
   const [countryId, setCountryId] = useState<CountryId | null>(null)
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(() => {
+    const defaultCategory = PROFESSIONS.find(p => p.id === 'management')?.category
+    return new Set(defaultCategory ? [defaultCategory] : [])
+  })
   const [askedSoFar, setAskedSoFar] = useState<string[]>([])
   const [question, setQuestion] = useState('')
   const [answer, setAnswer] = useState('')
@@ -224,10 +228,19 @@ export default function Home() {
     return headers
   }
 
-  async function startInterview(id: CountryId) {
-    setCountryId(id)
+  function toggleCategory(category: string) {
+    setExpandedCategories(prev => {
+      const next = new Set(prev)
+      if (next.has(category)) next.delete(category)
+      else next.add(category)
+      return next
+    })
+  }
+
+  async function startInterview() {
+    if (!countryId) return
     setAskedSoFar([])
-    await fetchQuestion(id, [])
+    await fetchQuestion(countryId, [])
   }
 
   async function fetchQuestion(id: CountryId, asked: string[]) {
@@ -415,60 +428,90 @@ export default function Home() {
                   {stage === 'select' && (
                     <div className="space-y-8">
                       <div>
-                        <div className="text-xs uppercase tracking-wide text-zinc-500 mb-3">1. Sua profissão</div>
-                        <div className="space-y-4">
-                          {groupProfessions().map(group => (
-                            <div key={group.category ?? 'other'}>
-                              {group.category && (
-                                <div className="text-[11px] uppercase tracking-wide text-zinc-400 dark:text-zinc-500 mb-2">{group.category}</div>
-                              )}
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                {group.items.map(p => (
-                                  <button
-                                    key={p.id}
-                                    onClick={() => setProfessionId(p.id)}
-                                    className={`text-left rounded-xl border p-4 transition-colors bg-white dark:bg-zinc-950 ${
-                                      professionId === p.id
-                                        ? 'border-black dark:border-white'
-                                        : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-600'
-                                    }`}
-                                  >
-                                    <div className="text-base font-medium text-black dark:text-zinc-50">{p.flag} {p.label}</div>
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                        {professionId === 'other' && (
-                          <input
-                            value={customProfession}
-                            onChange={e => setCustomProfession(e.target.value)}
-                            placeholder="Digite sua profissão/área (ex: UX Designer, Segurança da Informação...)"
-                            className="mt-3 w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-black dark:text-zinc-50 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-400"
-                          />
-                        )}
-                      </div>
-
-                      <div>
-                        <div className="text-xs uppercase tracking-wide text-zinc-500 mb-3">2. País do entrevistador</div>
+                        <div className="text-xs uppercase tracking-wide text-zinc-500 mb-3">1. País do entrevistador</div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           {COUNTRIES.map(c => (
                             <button
                               key={c.id}
-                              onClick={() => startInterview(c.id)}
-                              disabled={loading || !professionReady}
-                              className="text-left rounded-xl border border-zinc-200 dark:border-zinc-800 p-4 hover:border-zinc-400 dark:hover:border-zinc-600 transition-colors disabled:opacity-40 bg-white dark:bg-zinc-950"
+                              onClick={() => setCountryId(c.id)}
+                              disabled={loading}
+                              className={`text-left rounded-xl border p-4 transition-colors disabled:opacity-40 bg-white dark:bg-zinc-950 ${
+                                countryId === c.id
+                                  ? 'border-black dark:border-white'
+                                  : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-600'
+                              }`}
                             >
                               <div className="text-lg font-medium text-black dark:text-zinc-50">{c.flag} {c.label}</div>
                               <div className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{c.summary}</div>
                             </button>
                           ))}
                         </div>
-                        {!professionReady && (
-                          <p className="mt-2 text-xs text-zinc-500">Digite sua profissão acima pra liberar a escolha do país.</p>
+                        {country && (
+                          <div className="mt-3 rounded-lg bg-zinc-100 dark:bg-zinc-900 p-3 space-y-1">
+                            <div className="text-xs font-medium text-zinc-600 dark:text-zinc-400">Por que considerar {country.label}:</div>
+                            {country.funFacts.map((fact, i) => (
+                              <div key={i} className="text-xs text-zinc-500 dark:text-zinc-500 leading-relaxed">• {fact}</div>
+                            ))}
+                          </div>
                         )}
                       </div>
+
+                      <div>
+                        <div className="text-xs uppercase tracking-wide text-zinc-500 mb-3">2. Sua profissão</div>
+                        <div className="space-y-2">
+                          {groupProfessions().map(group => {
+                            const key = group.category ?? 'other'
+                            const isExpanded = !group.category || expandedCategories.has(group.category)
+                            return (
+                              <div key={key}>
+                                {group.category && (
+                                  <button
+                                    onClick={() => toggleCategory(group.category!)}
+                                    className="w-full flex items-center justify-between py-1.5 text-[11px] uppercase tracking-wide text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300"
+                                  >
+                                    {group.category}
+                                    <ChevronDown size={12} className={`transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                                  </button>
+                                )}
+                                {isExpanded && (
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2 mb-3">
+                                    {group.items.map(p => (
+                                      <button
+                                        key={p.id}
+                                        onClick={() => setProfessionId(p.id)}
+                                        className={`text-left rounded-xl border p-4 transition-colors bg-white dark:bg-zinc-950 ${
+                                          professionId === p.id
+                                            ? 'border-black dark:border-white'
+                                            : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-600'
+                                        }`}
+                                      >
+                                        <div className="text-base font-medium text-black dark:text-zinc-50">{p.flag} {p.label}</div>
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )
+                          })}
+                        </div>
+                        {professionId === 'other' && (
+                          <input
+                            value={customProfession}
+                            onChange={e => setCustomProfession(e.target.value)}
+                            placeholder="Digite sua profissão/área (ex: UX Designer, Segurança da Informação...)"
+                            className="mt-1 w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-black dark:text-zinc-50 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-400"
+                          />
+                        )}
+                      </div>
+
+                      <button
+                        onClick={startInterview}
+                        disabled={loading || !countryId || !professionReady}
+                        className="inline-flex items-center gap-2 rounded-lg bg-black dark:bg-white text-white dark:text-black px-4 py-2 text-sm font-medium disabled:opacity-40"
+                      >
+                        {loading ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} />}
+                        Começar entrevista
+                      </button>
                     </div>
                   )}
 

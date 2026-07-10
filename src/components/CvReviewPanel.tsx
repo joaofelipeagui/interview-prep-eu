@@ -2,11 +2,11 @@
 
 import { useState } from 'react'
 import { COUNTRIES, type CountryId } from '@/lib/countries'
-import { groupProfessions, type ProfessionId, isProfessionComplete } from '@/lib/professions'
+import { PROFESSIONS, groupProfessions, type ProfessionId, isProfessionComplete } from '@/lib/professions'
 import { getOrCreateClientId } from '@/lib/clientId'
 import CvFeedbackCard from './CvFeedbackCard'
 import PlansPanel, { type VerifiedSubscription } from './PlansPanel'
-import { Loader2, ArrowRight, RotateCcw, Upload, X, FileText } from 'lucide-react'
+import { Loader2, ArrowRight, RotateCcw, Upload, X, FileText, ChevronDown } from 'lucide-react'
 
 interface BlockedState {
   title: string
@@ -29,10 +29,23 @@ export default function CvReviewPanel({
   const [error, setError] = useState('')
   const [feedback, setFeedback] = useState('')
   const [blocked, setBlocked] = useState<BlockedState | null>(null)
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(() => {
+    const defaultCategory = PROFESSIONS.find(p => p.id === 'management')?.category
+    return new Set(defaultCategory ? [defaultCategory] : [])
+  })
 
   const country = COUNTRIES.find(c => c.id === countryId)
   const professionReady = isProfessionComplete(professionId, customProfession)
   const canSubmit = professionReady && countryId && (cvFile !== null || cvText.trim().length > 100)
+
+  function toggleCategory(category: string) {
+    setExpandedCategories(prev => {
+      const next = new Set(prev)
+      if (next.has(category)) next.delete(category)
+      else next.add(category)
+      return next
+    })
+  }
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -115,43 +128,7 @@ export default function CvReviewPanel({
       )}
 
       <div>
-        <div className="text-xs uppercase tracking-wide text-zinc-500 mb-3">1. Sua profissão</div>
-        <div className="space-y-4">
-          {groupProfessions().map(group => (
-            <div key={group.category ?? 'other'}>
-              {group.category && (
-                <div className="text-[11px] uppercase tracking-wide text-zinc-400 dark:text-zinc-500 mb-2">{group.category}</div>
-              )}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {group.items.map(p => (
-                  <button
-                    key={p.id}
-                    onClick={() => setProfessionId(p.id)}
-                    className={`text-left rounded-xl border p-4 transition-colors bg-white dark:bg-zinc-950 ${
-                      professionId === p.id
-                        ? 'border-black dark:border-white'
-                        : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-600'
-                    }`}
-                  >
-                    <div className="text-base font-medium text-black dark:text-zinc-50">{p.flag} {p.label}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-        {professionId === 'other' && (
-          <input
-            value={customProfession}
-            onChange={e => setCustomProfession(e.target.value)}
-            placeholder="Digite sua profissão/área"
-            className="mt-3 w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-black dark:text-zinc-50 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-400"
-          />
-        )}
-      </div>
-
-      <div>
-        <div className="text-xs uppercase tracking-wide text-zinc-500 mb-3">2. País de destino</div>
+        <div className="text-xs uppercase tracking-wide text-zinc-500 mb-3">1. País de destino</div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {COUNTRIES.map(c => (
             <button
@@ -167,6 +144,54 @@ export default function CvReviewPanel({
             </button>
           ))}
         </div>
+      </div>
+
+      <div>
+        <div className="text-xs uppercase tracking-wide text-zinc-500 mb-3">2. Sua profissão</div>
+        <div className="space-y-2">
+          {groupProfessions().map(group => {
+            const key = group.category ?? 'other'
+            const isExpanded = !group.category || expandedCategories.has(group.category)
+            return (
+              <div key={key}>
+                {group.category && (
+                  <button
+                    onClick={() => toggleCategory(group.category!)}
+                    className="w-full flex items-center justify-between py-1.5 text-[11px] uppercase tracking-wide text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300"
+                  >
+                    {group.category}
+                    <ChevronDown size={12} className={`transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                  </button>
+                )}
+                {isExpanded && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2 mb-3">
+                    {group.items.map(p => (
+                      <button
+                        key={p.id}
+                        onClick={() => setProfessionId(p.id)}
+                        className={`text-left rounded-xl border p-4 transition-colors bg-white dark:bg-zinc-950 ${
+                          professionId === p.id
+                            ? 'border-black dark:border-white'
+                            : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-600'
+                        }`}
+                      >
+                        <div className="text-base font-medium text-black dark:text-zinc-50">{p.flag} {p.label}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+        {professionId === 'other' && (
+          <input
+            value={customProfession}
+            onChange={e => setCustomProfession(e.target.value)}
+            placeholder="Digite sua profissão/área"
+            className="mt-1 w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-black dark:text-zinc-50 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-400"
+          />
+        )}
       </div>
 
       <div>
