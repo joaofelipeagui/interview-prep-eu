@@ -18,17 +18,28 @@ export interface ParsedFeedback {
   modelAnswer: string
 }
 
-// Headers matched loosely (see normalizeLine) so a stray "## " or "**" the model
-// sometimes adds even when told to use plain fixed headers doesn't defeat matching.
-// The English-corrections header specifically tolerates -, – or — as the separator.
-const SECTION_HEADERS: [RegExp, string][] = [
-  [/^PONTOS FORTES/, 'PONTOS FORTES'],
-  [/^PONTOS A MELHORAR/, 'PONTOS A MELHORAR'],
-  [/^ESTRUTURA DA RESPOSTA \(STAR\)/, 'ESTRUTURA DA RESPOSTA (STAR)'],
-  [/^O QUE O RECRUTADOR QUER OUVIR/, 'O QUE O RECRUTADOR QUER OUVIR'],
-  [/^INGL[ÊE]S\s*[-–—]\s*CORRE[ÇC][ÕO]ES E MELHORIAS/, 'INGLÊS — CORREÇÕES E MELHORIAS'],
-  [/^RESPOSTA MODELO/, 'RESPOSTA MODELO'],
+type SectionKey = 'strengths' | 'improvements' | 'star' | 'recruiter' | 'english' | 'model'
+
+// Headers matched loosely (see normalizeLine) so a stray "## " or "**" the model sometimes adds
+// even when told to use plain fixed headers doesn't defeat matching. Both PT and EN header text
+// are recognized (mapped to the same canonical key) so the parser self-detects whichever
+// language the model actually responded in, instead of trusting a separate lang flag.
+const SECTION_HEADERS: [RegExp, SectionKey][] = [
+  [/^PONTOS FORTES/, 'strengths'],
+  [/^STRENGTHS/, 'strengths'],
+  [/^PONTOS A MELHORAR/, 'improvements'],
+  [/^AREAS TO IMPROVE/, 'improvements'],
+  [/^ESTRUTURA DA RESPOSTA \(STAR\)/, 'star'],
+  [/^ANSWER STRUCTURE \(STAR\)/, 'star'],
+  [/^O QUE O RECRUTADOR QUER OUVIR/, 'recruiter'],
+  [/^WHAT THE RECRUITER WANTS TO HEAR/, 'recruiter'],
+  [/^INGL[ÊE]S\s*[-–—]\s*CORRE[ÇC][ÕO]ES E MELHORIAS/, 'english'],
+  [/^ENGLISH\s*[-–—]\s*CORRECTIONS AND IMPROVEMENTS/, 'english'],
+  [/^RESPOSTA MODELO/, 'model'],
+  [/^MODEL ANSWER/, 'model'],
 ]
+
+const SCORE_LINE = /^(NOTA|SCORE):/
 
 function stripBold(text: string): string {
   return text.replace(/\*\*/g, '')
@@ -40,33 +51,33 @@ function normalizeLine(line: string): string {
   return stripBold(line.trim().replace(/^#+\s*/, ''))
 }
 
-function splitSections(feedback: string): { notaLine: string; sections: Record<string, string> } {
+function splitSections(feedback: string): { scoreLine: string; sections: Record<SectionKey, string> } {
   const lines = feedback.split('\n')
-  let notaLine = ''
-  const starts: { key: string; index: number }[] = []
+  let scoreLine = ''
+  const starts: { key: SectionKey; index: number }[] = []
 
   lines.forEach((line, i) => {
     const trimmed = normalizeLine(line)
-    if (trimmed.startsWith('NOTA:')) notaLine = trimmed
+    if (SCORE_LINE.test(trimmed)) scoreLine = trimmed
     for (const [re, key] of SECTION_HEADERS) {
       if (re.test(trimmed)) starts.push({ key, index: i })
     }
   })
 
-  const sections: Record<string, string> = {}
+  const sections = {} as Record<SectionKey, string>
   for (let s = 0; s < starts.length; s++) {
     const bodyStart = starts[s].index + 1
     const bodyEnd = s + 1 < starts.length ? starts[s + 1].index : lines.length
     sections[starts[s].key] = lines.slice(bodyStart, bodyEnd).join('\n').trim()
   }
-  return { notaLine, sections }
+  return { scoreLine, sections }
 }
 
-function parseNota(notaLine: string): { score: number | null; band: string } {
-  // e.g. "NOTA: 7,3 — Atende bem (clara, estruturada...)" or "NOTA: 9/10 - Excede expectativas"
-  const scoreMatch = notaLine.match(/NOTA:\s*([\d]+(?:[.,]\d+)?)/i)
+function parseScore(scoreLine: string): { score: number | null; band: string } {
+  // e.g. "NOTA: 7,3 — Atende bem (...)" or "SCORE: 7.3 — Meets expectations well (...)"
+  const scoreMatch = scoreLine.match(/(?:NOTA|SCORE):\s*([\d]+(?:[.,]\d+)?)/i)
   const score = scoreMatch ? parseFloat(scoreMatch[1].replace(',', '.')) : null
-  const bandMatch = notaLine.match(/[-–—]\s*(.+)$/)
+  const bandMatch = scoreLine.match(/[-–—]\s*(.+)$/)
   const band = bandMatch ? bandMatch[1].trim() : ''
   return { score, band }
 }
@@ -82,9 +93,13 @@ function extractBullets(body: string): string[] {
 
 const STAR_LABELS: [RegExp, string][] = [
   [/^situa[cç][aã]o/i, 'Situação'],
+  [/^situation/i, 'Situation'],
   [/^tarefa/i, 'Tarefa'],
+  [/^task/i, 'Task'],
   [/^a[cç][aã]o\b/i, 'Ação'],
+  [/^action\b/i, 'Action'],
   [/^resultado/i, 'Resultado'],
+  [/^result/i, 'Result'],
 ]
 
 function extractStarItems(body: string): StarItem[] {
@@ -95,11 +110,11 @@ function extractStarItems(body: string): StarItem[] {
     const content = line.replace(/^[-*•]\s*/, '')
     for (const [re, label] of STAR_LABELS) {
       if (re.test(content)) {
-        const status: StarStatus = /aus[eê]nte/i.test(content)
+        const status: StarStatus = /aus[eê]nte|absent/i.test(content)
           ? 'ausente'
-          : /frac[oa]|parcial/i.test(content)
+          : /frac[oa]|parcial|weak|partial/i.test(content)
             ? 'fraco'
-            : /presente|forte/i.test(content)
+            : /presente|forte|present|strong/i.test(content)
               ? 'presente'
               : 'neutro'
         const colonIdx = content.indexOf(':')
@@ -113,7 +128,7 @@ function extractStarItems(body: string): StarItem[] {
 }
 
 function extractStarTip(body: string): string {
-  const match = body.match(/dica de reestrutura[cç][aã]o:?\**\s*([\s\S]*)/i)
+  const match = body.match(/(?:dica de reestrutura[cç][aã]o|restructuring tip):?\**\s*([\s\S]*)/i)
   return match ? stripBold(match[1].trim()) : ''
 }
 
@@ -122,27 +137,27 @@ function cleanParagraph(text: string): string {
   return stripBold(
     text
       .split('\n')
-      .filter(line => !/^para cada componente/i.test(line.trim()))
+      .filter(line => !/^(para cada componente|for each component)/i.test(line.trim()))
       .join('\n')
       .trim()
   )
 }
 
 export function parseFeedback(feedback: string): ParsedFeedback {
-  const { notaLine, sections } = splitSections(feedback)
-  const { score, band } = parseNota(notaLine)
+  const { scoreLine, sections } = splitSections(feedback)
+  const { score, band } = parseScore(scoreLine)
 
-  const starBody = sections['ESTRUTURA DA RESPOSTA (STAR)'] ?? ''
+  const starBody = sections.star ?? ''
 
   return {
     score,
     band,
-    strengths: extractBullets(sections['PONTOS FORTES'] ?? ''),
-    improvements: extractBullets(sections['PONTOS A MELHORAR'] ?? ''),
+    strengths: extractBullets(sections.strengths ?? ''),
+    improvements: extractBullets(sections.improvements ?? ''),
     starItems: extractStarItems(starBody),
     starTip: extractStarTip(starBody),
-    whatRecruiterWants: cleanParagraph(sections['O QUE O RECRUTADOR QUER OUVIR'] ?? ''),
-    englishNotes: extractBullets(sections['INGLÊS — CORREÇÕES E MELHORIAS'] ?? ''),
-    modelAnswer: stripBold((sections['RESPOSTA MODELO'] ?? '').trim().replace(/^"|"$/g, '')),
+    whatRecruiterWants: cleanParagraph(sections.recruiter ?? ''),
+    englishNotes: extractBullets(sections.english ?? ''),
+    modelAnswer: stripBold((sections.model ?? '').trim().replace(/^"|"$/g, '')),
   }
 }

@@ -1,4 +1,5 @@
 import { parseFeedback, type StarStatus } from '@/lib/parseFeedback'
+import { translations, type Locale } from '@/lib/i18n'
 import { CheckCircle2, AlertTriangle, Target, Lightbulb, Languages, Quote } from 'lucide-react'
 
 function scoreColors(score: number | null) {
@@ -31,7 +32,8 @@ function SectionCard({ icon, title, accent, children }: { icon: React.ReactNode;
   )
 }
 
-export default function FeedbackCard({ feedback }: { feedback: string }) {
+export default function FeedbackCard({ feedback, locale }: { feedback: string; locale: Locale }) {
+  const T = translations[locale]
   const parsed = parseFeedback(feedback)
   const colors = scoreColors(parsed.score)
 
@@ -39,16 +41,16 @@ export default function FeedbackCard({ feedback }: { feedback: string }) {
     <div className="space-y-4">
       <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 p-5 flex items-center gap-4">
         <div className={`flex-shrink-0 w-16 h-16 rounded-full ring-4 ${colors.ring} flex items-center justify-center`}>
-          <span className={`text-lg font-bold ${colors.text}`}>{parsed.score !== null ? parsed.score.toString().replace('.', ',') : '—'}</span>
+          <span className={`text-lg font-bold ${colors.text}`}>{parsed.score !== null ? (locale === 'en' ? parsed.score.toFixed(1) : parsed.score.toString().replace('.', ',')) : '—'}</span>
         </div>
         <div>
-          <div className="text-xs uppercase tracking-wide text-zinc-500 mb-1">Nota</div>
-          <span className={`inline-block rounded-full px-3 py-1 text-sm font-medium ${colors.pill}`}>{parsed.band || 'Avaliação'}</span>
+          <div className="text-xs uppercase tracking-wide text-zinc-500 mb-1">{T.fbScoreLabel}</div>
+          <span className={`inline-block rounded-full px-3 py-1 text-sm font-medium ${colors.pill}`}>{parsed.band || T.fbEvaluationFallback}</span>
         </div>
       </div>
 
       {parsed.strengths.length > 0 && (
-        <SectionCard icon={<CheckCircle2 size={16} className="text-emerald-600 dark:text-emerald-400" />} title="Pontos fortes" accent="border-l-emerald-400 dark:border-l-emerald-700">
+        <SectionCard icon={<CheckCircle2 size={16} className="text-emerald-600 dark:text-emerald-400" />} title={T.fbStrengths} accent="border-l-emerald-400 dark:border-l-emerald-700">
           <ul className="space-y-2">
             {parsed.strengths.map((s, i) => (
               <li key={i} className="flex gap-2 text-sm text-black dark:text-zinc-50 leading-relaxed">
@@ -61,7 +63,7 @@ export default function FeedbackCard({ feedback }: { feedback: string }) {
       )}
 
       {parsed.improvements.length > 0 && (
-        <SectionCard icon={<AlertTriangle size={16} className="text-amber-600 dark:text-amber-400" />} title="Pontos a melhorar" accent="border-l-amber-400 dark:border-l-amber-700">
+        <SectionCard icon={<AlertTriangle size={16} className="text-amber-600 dark:text-amber-400" />} title={T.fbImprovements} accent="border-l-amber-400 dark:border-l-amber-700">
           <ul className="space-y-2">
             {parsed.improvements.map((s, i) => (
               <li key={i} className="flex gap-2 text-sm text-black dark:text-zinc-50 leading-relaxed">
@@ -74,7 +76,7 @@ export default function FeedbackCard({ feedback }: { feedback: string }) {
       )}
 
       {parsed.starItems.length > 0 && (
-        <SectionCard icon={<Target size={16} className="text-indigo-600 dark:text-indigo-400" />} title="Estrutura da resposta (STAR)" accent="border-l-indigo-400 dark:border-l-indigo-700">
+        <SectionCard icon={<Target size={16} className="text-indigo-600 dark:text-indigo-400" />} title={T.fbStarStructure} accent="border-l-indigo-400 dark:border-l-indigo-700">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {parsed.starItems.map((item, i) => (
               <div key={i} className="flex gap-2 text-sm">
@@ -88,20 +90,20 @@ export default function FeedbackCard({ feedback }: { feedback: string }) {
           </div>
           {parsed.starTip && (
             <div className="mt-4 rounded-lg bg-indigo-50 dark:bg-indigo-950 px-3 py-2 text-sm text-indigo-900 dark:text-indigo-200">
-              <span className="font-medium">Dica de reestruturação: </span>{parsed.starTip}
+              <span className="font-medium">{T.fbRestructureTip} </span>{parsed.starTip}
             </div>
           )}
         </SectionCard>
       )}
 
       {parsed.whatRecruiterWants && (
-        <SectionCard icon={<Lightbulb size={16} className="text-blue-600 dark:text-blue-400" />} title="O que o recrutador quer ouvir" accent="border-l-blue-400 dark:border-l-blue-700">
+        <SectionCard icon={<Lightbulb size={16} className="text-blue-600 dark:text-blue-400" />} title={T.fbRecruiterWants} accent="border-l-blue-400 dark:border-l-blue-700">
           <p className="text-sm text-black dark:text-zinc-50 leading-relaxed whitespace-pre-wrap">{parsed.whatRecruiterWants}</p>
         </SectionCard>
       )}
 
       {parsed.englishNotes.length > 0 && (
-        <SectionCard icon={<Languages size={16} className="text-fuchsia-600 dark:text-fuchsia-400" />} title="Inglês — correções e melhorias" accent="border-l-fuchsia-400 dark:border-l-fuchsia-700">
+        <SectionCard icon={<Languages size={16} className="text-fuchsia-600 dark:text-fuchsia-400" />} title={T.fbEnglishNotes} accent="border-l-fuchsia-400 dark:border-l-fuchsia-700">
           <ul className="space-y-2">
             {parsed.englishNotes.map((s, i) => (
               <li key={i} className="text-sm text-black dark:text-zinc-50 leading-relaxed">{s}</li>
@@ -111,7 +113,7 @@ export default function FeedbackCard({ feedback }: { feedback: string }) {
       )}
 
       {parsed.modelAnswer && (
-        <SectionCard icon={<Quote size={16} className="text-zinc-600 dark:text-zinc-400" />} title="Resposta modelo" accent="border-l-zinc-400 dark:border-l-zinc-600">
+        <SectionCard icon={<Quote size={16} className="text-zinc-600 dark:text-zinc-400" />} title={T.fbModelAnswer} accent="border-l-zinc-400 dark:border-l-zinc-600">
           <p className="text-sm italic text-zinc-700 dark:text-zinc-300 leading-relaxed whitespace-pre-wrap">{parsed.modelAnswer}</p>
         </SectionCard>
       )}

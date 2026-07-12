@@ -6,6 +6,7 @@ interface FeedbackPdfInput {
   professionLabel: string
   question: string
   feedback: string
+  locale?: 'pt' | 'en'
 }
 
 const PAGE_WIDTH = 210
@@ -16,12 +17,19 @@ const LINE_HEIGHT = 5.5
 
 const KNOWN_HEADERS = [
   'NOTA:',
+  'SCORE:',
   'PONTOS FORTES:',
+  'STRENGTHS:',
   'PONTOS A MELHORAR:',
+  'AREAS TO IMPROVE:',
   'ESTRUTURA DA RESPOSTA (STAR):',
+  'ANSWER STRUCTURE (STAR):',
   'O QUE O RECRUTADOR QUER OUVIR:',
+  'WHAT THE RECRUITER WANTS TO HEAR:',
   'INGLÊS — CORREÇÕES E MELHORIAS:',
+  'ENGLISH — CORRECTIONS AND IMPROVEMENTS:',
   'RESPOSTA MODELO:',
+  'MODEL ANSWER:',
 ]
 
 function isHeaderLine(line: string): boolean {
@@ -29,7 +37,7 @@ function isHeaderLine(line: string): boolean {
   return KNOWN_HEADERS.some(h => trimmed.startsWith(h))
 }
 
-export function generateFeedbackPDF({ countryLabel, professionLabel, question, feedback }: FeedbackPdfInput) {
+export function generateFeedbackPDF({ countryLabel, professionLabel, question, feedback, locale = 'pt' }: FeedbackPdfInput) {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' })
   let y = MARGIN
 
@@ -57,13 +65,15 @@ export function generateFeedbackPDF({ countryLabel, professionLabel, question, f
   // Header
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(16)
-  doc.text('Feedback de Entrevista', MARGIN, y)
+  doc.text(locale === 'en' ? 'Interview Feedback' : 'Feedback de Entrevista', MARGIN, y)
   y += 8
 
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(10)
   doc.setTextColor(90, 90, 90)
-  const today = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
+  const today = locale === 'en'
+    ? new Date().toLocaleDateString('en-US', { day: '2-digit', month: 'long', year: 'numeric' })
+    : new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
   doc.text(`${countryLabel} · ${professionLabel} · ${today}`, MARGIN, y)
   doc.setTextColor(0, 0, 0)
   y += 10
@@ -79,7 +89,7 @@ export function generateFeedbackPDF({ countryLabel, professionLabel, question, f
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(8.5)
   doc.setTextColor(120, 120, 120)
-  doc.text('PERGUNTA', MARGIN + 4, y + 6)
+  doc.text(locale === 'en' ? 'QUESTION' : 'PERGUNTA', MARGIN + 4, y + 6)
   doc.setTextColor(0, 0, 0)
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(10.5)
@@ -117,9 +127,10 @@ interface CvFeedbackPdfInput {
   countryLabel: string
   professionLabel: string
   feedback: string
+  locale?: 'pt' | 'en'
 }
 
-export function generateCvFeedbackPDF({ countryLabel, professionLabel, feedback }: CvFeedbackPdfInput) {
+export function generateCvFeedbackPDF({ countryLabel, professionLabel, feedback, locale = 'pt' }: CvFeedbackPdfInput) {
   const parsed = parseCvFeedback(feedback)
   const doc = new jsPDF({ unit: 'mm', format: 'a4' })
   let y = MARGIN
@@ -158,21 +169,30 @@ export function generateCvFeedbackPDF({ countryLabel, professionLabel, feedback 
   // Header
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(16)
-  doc.text('Revisão de Currículo', MARGIN, y)
+  doc.text(locale === 'en' ? 'Resume Review' : 'Revisão de Currículo', MARGIN, y)
   y += 8
 
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(10)
   doc.setTextColor(90, 90, 90)
-  const today = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
+  const today = locale === 'en'
+    ? new Date().toLocaleDateString('en-US', { day: '2-digit', month: 'long', year: 'numeric' })
+    : new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
   doc.text(`${countryLabel} · ${professionLabel} · ${today}`, MARGIN, y)
   doc.setTextColor(0, 0, 0)
   y += 10
 
-  writeSection('PONTOS FORTES', parsed.strengths)
-  writeSection('PONTOS A MELHORAR', parsed.improvements)
-  writeSection(`CONVENÇÕES DE ${countryLabel.toUpperCase()}`, parsed.conventions)
-  writeSection('PALAVRAS-CHAVE E ATS', parsed.atsKeywords)
+  if (locale === 'en') {
+    writeSection('STRENGTHS', parsed.strengths)
+    writeSection('AREAS TO IMPROVE', parsed.improvements)
+    writeSection(`CONVENTIONS FOR ${countryLabel.toUpperCase()}`, parsed.conventions)
+    writeSection('KEYWORDS AND ATS', parsed.atsKeywords)
+  } else {
+    writeSection('PONTOS FORTES', parsed.strengths)
+    writeSection('PONTOS A MELHORAR', parsed.improvements)
+    writeSection(`CONVENÇÕES DE ${countryLabel.toUpperCase()}`, parsed.conventions)
+    writeSection('PALAVRAS-CHAVE E ATS', parsed.atsKeywords)
+  }
 
   const countryFile = countryLabel.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\w]+/g, '-').toLowerCase()
   doc.save(`revisao-curriculo-${countryFile}-${Date.now()}.pdf`)

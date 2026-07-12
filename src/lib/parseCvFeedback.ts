@@ -30,10 +30,10 @@ export function parseCvFeedback(feedback: string): ParsedCvFeedback {
 
   lines.forEach((line, i) => {
     const trimmed = normalizeLine(line)
-    if (trimmed.startsWith('PONTOS FORTES')) starts.push({ key: 'strengths', index: i })
-    else if (trimmed.startsWith('PONTOS A MELHORAR')) starts.push({ key: 'improvements', index: i })
-    else if (/^CONVEN[ÇC][ÕO]ES DE/i.test(trimmed)) starts.push({ key: 'conventions', index: i })
-    else if (trimmed.startsWith('PALAVRAS-CHAVE')) starts.push({ key: 'atsKeywords', index: i })
+    if (trimmed.startsWith('PONTOS FORTES') || trimmed.startsWith('STRENGTHS')) starts.push({ key: 'strengths', index: i })
+    else if (trimmed.startsWith('PONTOS A MELHORAR') || trimmed.startsWith('AREAS TO IMPROVE')) starts.push({ key: 'improvements', index: i })
+    else if (/^CONVEN[ÇC][ÕO]ES DE/i.test(trimmed) || /^CONVENTIONS FOR/i.test(trimmed)) starts.push({ key: 'conventions', index: i })
+    else if (trimmed.startsWith('PALAVRAS-CHAVE') || trimmed.startsWith('KEYWORDS')) starts.push({ key: 'atsKeywords', index: i })
   })
 
   const sections: Record<string, string> = {}

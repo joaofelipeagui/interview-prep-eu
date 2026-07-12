@@ -5,8 +5,10 @@ export type CountryId = 'germany' | 'netherlands' | 'uk_ireland' | 'portugal' | 
 export interface CountryPersona {
   id: CountryId
   label: string
+  labelEn: string
   flag: string
   summary: string
+  summaryEn: string
   interviewerStyle: string
   questionGuidance: string
   evaluationFocus: string
@@ -17,14 +19,17 @@ export interface CountryPersona {
   /** Sourced facts (salary, visa/immigration path, tech-sector outlook) shown to the candidate as
    *  "why consider this country" context — each fact cites its source, not invented figures. */
   funFacts: string[]
+  funFactsEn: string[]
 }
 
 export const COUNTRIES: CountryPersona[] = [
   {
     id: 'germany',
     label: 'Alemanha',
+    labelEn: 'Germany',
     flag: '🇩🇪',
     summary: 'Formal, estruturado, foco em competência técnica com dados concretos.',
+    summaryEn: 'Formal, structured, focus on technical competence with concrete data.',
     interviewerStyle: `You are a formal, structured German hiring manager for a technical Program Manager role. You value precision, punctuality, and concrete evidence over storytelling. You ask direct competency-based questions and often push for specific numbers, timelines, and technical detail. You show little small talk. You may probe about work permit / visa readiness (EU Blue Card) directly.`,
     questionGuidance: 'Ask a structured competency-based question that demands a concrete, technical, data-backed answer (e.g. "Give me the exact numbers.").',
     evaluationFocus: 'Penalize vague storytelling without data. Reward precision, specific metrics, and clear structure. Note if the candidate sounds unprepared for direct follow-up on numbers.',
@@ -39,12 +44,19 @@ export const COUNTRIES: CountryPersona[] = [
       'Titular do EU Blue Card pode pedir residência permanente em 21-27 meses, bem menos que os 5 anos padrão (germany-visa.org, 2025).',
       'O déficit de profissionais de TI no país pode passar de 660 mil vagas até 2040 se a tendência atual continuar (Bitkom).',
     ],
+    funFactsEn: [
+      "Senior devs in Berlin earn an average of €81,000/year, and ~41% of software development jobs in the city don't require fluent German (Glassdoor; The Local, 2026).",
+      'EU Blue Card holders can apply for permanent residency in 21-27 months, far less than the standard 5 years (germany-visa.org, 2025).',
+      "The country's IT talent shortage could exceed 660,000 openings by 2040 if the current trend continues (Bitkom).",
+    ],
   },
   {
     id: 'netherlands',
     label: 'Holanda',
+    labelEn: 'Netherlands',
     flag: '🇳🇱',
     summary: 'Tom informal, mas direto — valoriza quem discorda com argumento.',
+    summaryEn: 'Informal but direct tone — values people who disagree with a good argument.',
     interviewerStyle: `You are a Dutch hiring manager: informal tone, very direct ("Dutch directness"). You respect candidates who push back or disagree with a well-reasoned argument rather than just agreeing politely. You may bring up salary and work expectations openly and early.`,
     questionGuidance: 'Ask a question that invites the candidate to take a position or disagree with a premise, testing whether they can argue their view respectfully but firmly.',
     evaluationFocus: 'Reward candidates who state an opinion clearly and back it with reasoning. Penalize excessive hedging or over-politeness that avoids taking a stance.',
@@ -59,12 +71,19 @@ export const COUNTRIES: CountryPersona[] = [
       'O "regime dos 30%" isenta até 30% do salário bruto de imposto por até 5 anos — pode significar milhares de euros a mais de líquido por ano.',
       'Governo mira 1 milhão de profissionais de TIC até 2030; quase metade das vagas de tech seguiam abertas no fim de 2025 (UWV).',
     ],
+    funFactsEn: [
+      'Average total compensation for a software engineer in Greater Amsterdam is €101,422/year (levels.fyi, 2025-26).',
+      "The '30% ruling' exempts up to 30% of gross salary from tax for up to 5 years — potentially thousands of extra euros in take-home pay per year.",
+      'The government targets 1 million ICT professionals by 2030; nearly half of tech openings were still unfilled at the end of 2025 (UWV).',
+    ],
   },
   {
     id: 'uk_ireland',
     label: 'Reino Unido / Irlanda',
+    labelEn: 'UK / Ireland',
     flag: '🇬🇧',
     summary: 'Estilo mais próximo do americano — perguntas comportamentais (STAR).',
+    summaryEn: 'Style closer to American — behavioral (STAR) questions.',
     interviewerStyle: `You are a UK/Ireland hiring manager using structured behavioral interviewing. You ask STAR-style questions (Situation, Task, Action, Result) and expect the candidate to articulate impact and ownership clearly, with some polish and confident self-presentation.`,
     questionGuidance: 'Ask a classic STAR behavioral question relevant to a technical Program Manager role.',
     evaluationFocus: 'Score strictly against the STAR structure. Reward clear articulation of measurable impact. Penalize rambling answers without a clear result.',
@@ -79,12 +98,19 @@ export const COUNTRIES: CountryPersona[] = [
       'Dublin sedia as sedes europeias de Google, Meta, Microsoft e Amazon, atraídas em parte pelo imposto corporativo de 12,5% (dublin.ie).',
       'O setor de TIC irlandês deve criar ~40 mil novos empregos entre 2025-2030 (IDA Ireland / Mordor Intelligence).',
     ],
+    funFactsEn: [
+      "The UK's Global Talent Visa requires no job offer, no minimum salary, and no language test (gov.uk / Tech Nation).",
+      'Dublin hosts the European headquarters of Google, Meta, Microsoft, and Amazon, drawn in part by the 12.5% corporate tax rate (dublin.ie).',
+      "Ireland's ICT sector is expected to create ~40,000 new jobs between 2025-2030 (IDA Ireland / Mordor Intelligence).",
+    ],
   },
   {
     id: 'portugal',
     label: 'Portugal',
+    labelEn: 'Portugal',
     flag: '🇵🇹',
     summary: 'Mais relacional, small talk importa, hierarquia é respeitada.',
+    summaryEn: 'More relational, small talk matters, hierarchy is respected.',
     interviewerStyle: `You are a Portuguese hiring manager. You value warmth and relationship-building before getting into substance, respect for hierarchy, and a calmer pace. You still evaluate competence carefully but the tone is friendlier and less confrontational than German or Dutch styles.`,
     questionGuidance: 'Open with a warmer, relationship-oriented framing, then ask a competency question at a comfortable pace.',
     evaluationFocus: 'Reward candidates who build rapport and show humility alongside competence. Note if the candidate is too abrupt or purely transactional in tone.',
@@ -99,12 +125,19 @@ export const COUNTRIES: CountryPersona[] = [
       'Desemprego no setor de tech é de só 2,3%, com 40% das novas vagas preenchidas por profissionais estrangeiros (The Portugal Post, 2026).',
       'Nova lei aumentou o prazo pra brasileiros pedirem cidadania de 5 para 7 anos — ainda mais rápido que os 10 exigidos de outros estrangeiros (Lei Orgânica 1/2026).',
     ],
+    funFactsEn: [
+      "Europe's largest Brazilian community: nearly 485,000 officially resident Brazilians, +31% in one year (AIMA, 2024).",
+      'Tech-sector unemployment is only 2.3%, with 40% of new openings filled by foreign professionals (The Portugal Post, 2026).',
+      'A new law extended the residency requirement for Brazilians applying for citizenship from 5 to 7 years — still faster than the 10 years required of other foreigners (Organic Law 1/2026).',
+    ],
   },
   {
     id: 'france',
     label: 'França',
+    labelEn: 'France',
     flag: '🇫🇷',
     summary: 'Hierárquico e formal — credenciais e argumentação analítica pesam.',
+    summaryEn: 'Hierarchical and formal — credentials and analytical argumentation carry weight.',
     interviewerStyle: `You are a French hiring manager. You are formal, value academic credentials and analytical rigor, and expect well-structured, almost case-study-like reasoning in answers. Hierarchy and formality matter.`,
     questionGuidance: 'Ask an analytical, case-style question that requires structured reasoning (e.g. "How would you approach...").',
     evaluationFocus: 'Reward structured, logical reasoning and clear framing of the problem before the answer. Penalize answers that jump straight to a conclusion without showing the reasoning process.',
@@ -119,12 +152,19 @@ export const COUNTRIES: CountryPersona[] = [
       'O setor de serviços digitais deve criar 600 mil empregos até 2030, incluindo 115 mil de engenharia de TI (France Stratégie, governo francês).',
       'Mais de 80 mil vagas digitais seguiam não preenchidas em 2025 (Numeum).',
     ],
+    funFactsEn: [
+      'The French Tech Visa requires a minimum salary of only ~€39,582/year — well below the Paris tech median of €79,231 (nextleveljobs.eu; levels.fyi).',
+      'The digital services sector is expected to create 600,000 jobs by 2030, including 115,000 in IT engineering (France Stratégie, French government).',
+      'Over 80,000 digital positions remained unfilled in 2025 (Numeum).',
+    ],
   },
   {
     id: 'nordics',
     label: 'Países Nórdicos',
+    labelEn: 'Nordic Countries',
     flag: '🇸🇪',
     summary: 'Hierarquia plana, tom casual, decisão por consenso, silêncio é normal.',
+    summaryEn: 'Flat hierarchy, casual tone, consensus-driven decisions, silence is normal.',
     interviewerStyle: `You are a Nordic (Swedish/Danish) hiring manager. Flat hierarchy, casual tone even in a formal interview, consensus-driven culture. You care about work-life balance fit and team collaboration style. Silence and pauses in conversation are normal and not awkward.`,
     questionGuidance: 'Ask a casual-toned question about collaboration style, consensus-building, or work-life balance fit alongside a competency check.',
     evaluationFocus: 'Reward candidates who emphasize collaboration and consensus over individual heroics. Penalize answers that sound overly hierarchical or "lone hero" in framing.',
@@ -139,12 +179,19 @@ export const COUNTRIES: CountryPersona[] = [
       'O visto sueco de busca de emprego permite entrar no país pra procurar vaga sem oferta prévia, se tiver mestrado ou doutorado (2025).',
       'Governo mira +100 mil especialistas em tech até 2030, com SEK 5,3 bi investidos em requalificação.',
     ],
+    funFactsEn: [
+      'Average software engineer salary in Sweden is ~€51,000/year, exceeding SEK 1.19 million at companies like Spotify (levels.fyi, 2025).',
+      "Sweden's job-seeker visa lets you enter the country to look for work without a prior offer, if you hold a master's or doctoral degree (2025).",
+      'The government targets +100,000 tech specialists by 2030, with SEK 5.3B invested in reskilling.',
+    ],
   },
   {
     id: 'usa',
     label: 'Estados Unidos',
+    labelEn: 'United States',
     flag: '🇺🇸',
     summary: 'Direto e autopromocional — perguntas estilo Amazon Leadership Principles com métricas de impacto.',
+    summaryEn: 'Direct and self-promotional — Amazon Leadership Principles-style questions with impact metrics.',
     interviewerStyle: `You are a fast-paced US tech hiring manager running a structured behavioral interview loop, heavily modeled on Amazon's Leadership Principles style ("Tell me about a time..."). You expect the candidate to sell themselves confidently and directly — modesty reads as weakness here. You want the STAR method (Situation, Task, Action, Result) with quantified, measurable impact, not just a narrative. The pace is brisk; you move on quickly if an answer is vague. You may also ask directly, in a neutral HR-compliance tone, about current or future visa sponsorship needs (H-1B, O-1, TN, etc.) as a practical logistics question, not as a judgment.`,
     questionGuidance: 'Ask a STAR-style behavioral question modeled on Amazon Leadership Principles (e.g. ownership, bias for action, disagree and commit, customer obsession) that demands a confident, quantified answer.',
     evaluationFocus: 'Reward confident self-promotion, quantified metrics/impact, and clean STAR structure. Penalize excessive modesty, vagueness about outcomes, or rambling without a clear result. Note if the candidate seems unprepared for a direct follow-up on visa/work-authorization status.',
@@ -159,12 +206,19 @@ export const COUNTRIES: CountryPersona[] = [
       'Emprego de desenvolvedores de software, analistas de QA e testers deve crescer 15% até 2034 — bem acima da média (U.S. Bureau of Labor Statistics, fonte oficial).',
       'Desde 2026, a loteria do H-1B passou a favorecer vagas de nível sênior — ficou mais difícil entrar via cargo júnior (Seyfarth Shaw, 2026).',
     ],
+    funFactsEn: [
+      'Median Software Engineer salary via H-1B was US$136,000/year in 2025, with Google and Meta paying total compensation above US$200k (h1bgrader.com).',
+      'Employment for software developers, QA analysts, and testers is projected to grow 15% through 2034 — well above average (U.S. Bureau of Labor Statistics, official source).',
+      'Since 2026, the H-1B lottery has favored senior-level roles — entering via a junior position has gotten harder (Seyfarth Shaw, 2026).',
+    ],
   },
   {
     id: 'canada',
     label: 'Canadá',
+    labelEn: 'Canada',
     flag: '🇨🇦',
     summary: 'Colaborativo e menos agressivo que os EUA, mas ainda formato STAR — forte peso em fit de equipe.',
+    summaryEn: 'Collaborative and less aggressive than the US, but still STAR format — strong weight on team fit.',
     interviewerStyle: `You are a Canadian tech hiring manager. Your style is still structured and behavioral (STAR method), similar to the US, but noticeably more collaborative, polite, and less confrontational — you soften follow-ups and give the candidate room rather than pushing hard. You place strong weight on soft skills, teamwork, and cultural fit alongside technical competence. If the topic of work authorization comes up, you raise it naturally and matter-of-factly, often referencing the Express Entry / PR pathway, rather than treating it as a red flag.`,
     questionGuidance: 'Ask a STAR-style behavioral question focused on teamwork, cross-functional collaboration, or handling a difficult stakeholder, delivered in a warmer, less confrontational tone than a typical US interview.',
     evaluationFocus: 'Reward collaborative framing, humility, and clear STAR structure with genuine team-oriented outcomes. Penalize overly aggressive self-promotion or dismissiveness toward teammates. Note if the candidate discusses work authorization / immigration pathway naturally and confidently.',
@@ -178,6 +232,11 @@ export const COUNTRIES: CountryPersona[] = [
       'O setor de TIC contribuiu CAD 131,6 bi ao PIB canadense em 2024, crescendo 3x mais rápido que a economia geral (ISED, fonte governamental).',
       'O Express Entry tem categoria dedicada a ocupações STEM, com pontuação reduzida pra quem tem experiência recente em tech (CIC News, 2025).',
       'Salário médio de engenheiro de software é CAD 88.561/ano — menor que nos EUA, mas com caminho de residência permanente mais rápido e previsível (levels.fyi).',
+    ],
+    funFactsEn: [
+      "The ICT sector contributed CAD 131.6B to Canada's GDP in 2024, growing 3x faster than the overall economy (ISED, government source).",
+      'Express Entry has a dedicated STEM occupations category with a reduced score requirement for those with recent tech experience (CIC News, 2025).',
+      'Average software engineer salary is CAD 88,561/year — lower than the US, but with a faster, more predictable path to permanent residency (levels.fyi).',
     ],
   },
 ]

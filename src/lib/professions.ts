@@ -33,9 +33,19 @@ export type ProfessionId =
 /** Groups roles in the UI picker — purely presentational, does not affect the prompt. */
 export type ProfessionCategory = 'Execução técnica' | 'Gestão' | 'Liderança técnica' | 'Arquitetura' | 'Diretoria / Liderança sênior' | null
 
+/** English display names for the PT category keys above — presentational only. */
+export const CATEGORY_LABELS_EN: Record<string, string> = {
+  'Execução técnica': 'Technical execution',
+  'Gestão': 'Management',
+  'Liderança técnica': 'Technical leadership',
+  'Arquitetura': 'Architecture',
+  'Diretoria / Liderança sênior': 'Executive / Senior leadership',
+}
+
 export interface Profession {
   id: ProfessionId
   label: string
+  labelEn: string
   flag: string
   category: ProfessionCategory
   /** No trailing period — buildRoleContext appends punctuation uniformly. */
@@ -46,6 +56,7 @@ export const PROFESSIONS: Profession[] = [
   {
     id: 'networks',
     label: 'Redes / Infraestrutura de TI',
+    labelEn: 'Network / IT Infrastructure',
     flag: '🌐',
     category: 'Execução técnica',
     domainContext: 'Network Engineer or Network/Infrastructure roles — routing and switching, SD-WAN, MPLS, DIA circuits, network security, cloud networking, enterprise WAN rollouts',
@@ -53,6 +64,7 @@ export const PROFESSIONS: Profession[] = [
   {
     id: 'data',
     label: 'Dados (Analytics / Engenharia / Ciência de Dados)',
+    labelEn: 'Data (Analytics / Engineering / Data Science)',
     flag: '📊',
     category: 'Execução técnica',
     domainContext: 'Data Analyst, Data Engineer, or Data Scientist roles — SQL and Python, ETL/data pipelines, dashboards and reporting, data governance and quality, machine learning models in production',
@@ -60,6 +72,7 @@ export const PROFESSIONS: Profession[] = [
   {
     id: 'software',
     label: 'Programação / Engenharia de Software',
+    labelEn: 'Software Engineering / Programming',
     flag: '💻',
     category: 'Execução técnica',
     domainContext: 'Software Engineer or Developer roles — backend/frontend systems, APIs, code architecture, testing, CI/CD, debugging production issues, code review',
@@ -67,6 +80,7 @@ export const PROFESSIONS: Profession[] = [
   {
     id: 'security',
     label: 'Segurança da Informação / Cibersegurança',
+    labelEn: 'Information Security / Cybersecurity',
     flag: '🛡️',
     category: 'Execução técnica',
     domainContext: 'Information Security Analyst, Security Engineer, or Cybersecurity Analyst roles — threat detection and incident response, vulnerability management, security tooling (SIEM, IDS/IPS), compliance frameworks (ISO 27001, GDPR, NIS2), security awareness and risk assessment',
@@ -74,6 +88,7 @@ export const PROFESSIONS: Profession[] = [
   {
     id: 'devops_sre',
     label: 'DevOps / SRE / Cloud Engineering',
+    labelEn: 'DevOps / SRE / Cloud Engineering',
     flag: '♾️',
     category: 'Execução técnica',
     domainContext: 'DevOps Engineer, Site Reliability Engineer (SRE), or Cloud Engineer roles — CI/CD pipelines, infrastructure as code (Terraform, Ansible), container orchestration (Kubernetes, Docker), observability and on-call incident response, reliability and uptime (SLOs/error budgets), cloud cost optimization',
@@ -81,6 +96,7 @@ export const PROFESSIONS: Profession[] = [
   {
     id: 'business_analyst',
     label: 'Analista de Negócios / Sistemas',
+    labelEn: 'Business / Systems Analyst',
     flag: '🔍',
     category: 'Execução técnica',
     domainContext: 'Business Analyst or Systems Analyst roles — requirements gathering and documentation, process mapping and gap analysis, bridging business stakeholders and technical teams, functional specifications, user acceptance testing, translating business needs into actionable technical requirements',
@@ -88,6 +104,7 @@ export const PROFESSIONS: Profession[] = [
   {
     id: 'qa_engineer',
     label: 'QA / Test Engineering',
+    labelEn: 'QA / Test Engineering',
     flag: '✅',
     category: 'Execução técnica',
     domainContext: 'QA Engineer or Test Engineer roles — test planning and strategy, manual and automated testing, bug triage and reporting, test automation frameworks (Selenium, Cypress, Playwright), regression testing, quality gates in CI/CD pipelines',
@@ -95,6 +112,7 @@ export const PROFESSIONS: Profession[] = [
   {
     id: 'ml_engineer',
     label: 'Machine Learning / AI Engineer',
+    labelEn: 'Machine Learning / AI Engineer',
     flag: '🤖',
     category: 'Execução técnica',
     domainContext: 'Machine Learning Engineer or AI Engineer roles — model training and evaluation, deploying and monitoring ML models in production (MLOps), feature engineering, model performance and drift monitoring, working with data scientists to productionize research, LLM/generative AI integration',
@@ -102,6 +120,7 @@ export const PROFESSIONS: Profession[] = [
   {
     id: 'sap_consultant',
     label: 'Consultor SAP / Salesforce / ERP',
+    labelEn: 'SAP / Salesforce / ERP Consultant',
     flag: '🧾',
     category: 'Execução técnica',
     domainContext: 'SAP, Salesforce, or ERP Functional/Technical Consultant roles — business process configuration, module implementation (e.g. SAP FI/CO/MM/SD or Salesforce Sales/Service Cloud), requirements-to-configuration mapping, client workshops, go-live support, integration between ERP/CRM modules and legacy systems',
@@ -109,6 +128,7 @@ export const PROFESSIONS: Profession[] = [
   {
     id: 'dba',
     label: 'DBA (Administrador de Banco de Dados)',
+    labelEn: 'DBA (Database Administrator)',
     flag: '🗃️',
     category: 'Execução técnica',
     domainContext: 'Database Administrator (DBA) roles — database performance tuning, backup and disaster recovery, replication and high availability, capacity planning, security and access control, migrations between database engines (SQL Server, Oracle, PostgreSQL, MySQL)',
@@ -116,6 +136,7 @@ export const PROFESSIONS: Profession[] = [
   {
     id: 'mobile_developer',
     label: 'Desenvolvedor Mobile (iOS/Android)',
+    labelEn: 'Mobile Developer (iOS/Android)',
     flag: '📱',
     category: 'Execução técnica',
     domainContext: 'Mobile Developer roles (iOS, Android, or cross-platform with React Native/Flutter) — native and cross-platform app architecture, app store release cycles, offline-first design, performance and battery optimization, mobile-specific testing and CI/CD',
@@ -123,6 +144,7 @@ export const PROFESSIONS: Profession[] = [
   {
     id: 'it_audit',
     label: 'Auditoria de TI / GRC',
+    labelEn: 'IT Audit / GRC',
     flag: '⚖️',
     category: 'Execução técnica',
     domainContext: 'IT Audit or GRC (Governance, Risk & Compliance) Analyst roles — IT controls testing and audit planning, risk assessment frameworks, regulatory compliance (SOX, GDPR, ISO 27001), evidence gathering and audit reporting, working with business and technical teams to remediate findings',
@@ -130,6 +152,7 @@ export const PROFESSIONS: Profession[] = [
   {
     id: 'management',
     label: 'Gestão de Projetos / Programas',
+    labelEn: 'Project / Program Management',
     flag: '📋',
     category: 'Gestão',
     domainContext: 'Program Manager or Project Manager roles — cross-functional delivery, stakeholder management, timelines and milestones, budget and risk management, vendor and cross-team coordination',
@@ -137,6 +160,7 @@ export const PROFESSIONS: Profession[] = [
   {
     id: 'product_manager',
     label: 'Product Manager / Product Owner',
+    labelEn: 'Product Manager / Product Owner',
     flag: '🚀',
     category: 'Gestão',
     domainContext: 'Product Manager or Product Owner roles — product strategy and vision, user research and discovery, prioritization frameworks (RICE, MoSCoW), defining and tracking success metrics/OKRs, working with design and engineering to ship features, stakeholder alignment on product direction',
@@ -144,6 +168,7 @@ export const PROFESSIONS: Profession[] = [
   {
     id: 'scrum_master',
     label: 'Scrum Master / Agile Coach',
+    labelEn: 'Scrum Master / Agile Coach',
     flag: '🔄',
     category: 'Gestão',
     domainContext: 'Scrum Master or Agile Coach roles — facilitating Scrum/Kanban ceremonies, removing team blockers, coaching teams and stakeholders on agile practices, tracking velocity and delivery health, driving continuous improvement, balancing process rigor with team autonomy',
@@ -151,6 +176,7 @@ export const PROFESSIONS: Profession[] = [
   {
     id: 'tech_lead',
     label: 'Tech Lead',
+    labelEn: 'Tech Lead',
     flag: '🧭',
     category: 'Liderança técnica',
     domainContext: 'Tech Lead roles — hands-on technical leadership of a small engineering team, making and defending architecture decisions day-to-day, code review and mentoring, balancing individual contribution with unblocking teammates, translating product requirements into technical plans',
@@ -158,6 +184,7 @@ export const PROFESSIONS: Profession[] = [
   {
     id: 'engineering_manager',
     label: 'Gerente de Engenharia',
+    labelEn: 'Engineering Manager',
     flag: '👥',
     category: 'Liderança técnica',
     domainContext: 'Engineering Manager roles — people management (1:1s, performance, career growth), hiring and team building, sprint/delivery accountability without necessarily writing code day-to-day, balancing technical debt against roadmap pressure, being the bridge between individual contributors and senior leadership',
@@ -165,6 +192,7 @@ export const PROFESSIONS: Profession[] = [
   {
     id: 'solutions_architect',
     label: 'Arquiteto de Soluções',
+    labelEn: 'Solutions Architect',
     flag: '🧩',
     category: 'Arquitetura',
     domainContext: 'Solutions Architect roles — cross-functional system design bridging business and technical teams, trade-off analysis (build vs buy, cost vs scalability), technical roadmaps, presenting architecture decisions to both engineers and executives',
@@ -172,6 +200,7 @@ export const PROFESSIONS: Profession[] = [
   {
     id: 'software_architect',
     label: 'Arquiteto de Software',
+    labelEn: 'Software Architect',
     flag: '🏗️',
     category: 'Arquitetura',
     domainContext: 'Software Architect roles — system design and architecture patterns, scalability and reliability trade-offs, technology stack decisions, technical debt management, mentoring engineering teams, design and code reviews at scale',
@@ -179,6 +208,7 @@ export const PROFESSIONS: Profession[] = [
   {
     id: 'infra_architect',
     label: 'Arquiteto de Redes / Cloud',
+    labelEn: 'Infrastructure / Cloud Architect',
     flag: '☁️',
     category: 'Arquitetura',
     domainContext: 'Infrastructure/Cloud/Network Architect roles — enterprise network and cloud architecture, high-availability and disaster-recovery design, capacity planning, security-by-design, multi-cloud and hybrid-cloud strategy, vendor and technology selection',
@@ -186,6 +216,7 @@ export const PROFESSIONS: Profession[] = [
   {
     id: 'data_architect',
     label: 'Arquiteto de Dados',
+    labelEn: 'Data Architect',
     flag: '🗄️',
     category: 'Arquitetura',
     domainContext: 'Data Architect roles — data platform and pipeline architecture, data modeling and governance frameworks, choosing between data warehouse/lake/lakehouse approaches, scalability and cost trade-offs, data security and compliance (GDPR)',
@@ -193,6 +224,7 @@ export const PROFESSIONS: Profession[] = [
   {
     id: 'it_director',
     label: 'Diretor de TI',
+    labelEn: 'IT Director',
     flag: '🏢',
     category: 'Diretoria / Liderança sênior',
     domainContext: 'IT Director / Head of IT roles — technology strategy aligned to business goals, budget ownership and vendor negotiation, team and org design, risk and compliance oversight, presenting to C-level and board, managing multiple technical teams',
@@ -200,6 +232,7 @@ export const PROFESSIONS: Profession[] = [
   {
     id: 'engineering_director',
     label: 'Diretor de Engenharia',
+    labelEn: 'Engineering Director',
     flag: '🎯',
     category: 'Diretoria / Liderança sênior',
     domainContext: 'Engineering Director / Head of Engineering roles — engineering strategy and technical vision, hiring and org scaling, budget and headcount planning, cross-team prioritization, balancing technical debt against delivery pressure, representing engineering to the executive team',
@@ -207,6 +240,7 @@ export const PROFESSIONS: Profession[] = [
   {
     id: 'infra_director',
     label: 'Diretor de Infraestrutura',
+    labelEn: 'Infrastructure Director',
     flag: '🛠️',
     category: 'Diretoria / Liderança sênior',
     domainContext: 'Director of Infrastructure / IT Operations roles — infrastructure strategy and modernization roadmaps, uptime/SLA ownership, budget for infrastructure and cloud spend, vendor and outsourcing management, incident and crisis leadership, aligning infra investment with business risk',
@@ -214,6 +248,7 @@ export const PROFESSIONS: Profession[] = [
   {
     id: 'data_director',
     label: 'Diretor de Dados / Analytics',
+    labelEn: 'Data / Analytics Director',
     flag: '📈',
     category: 'Diretoria / Liderança sênior',
     domainContext: 'Director of Data / Head of Data & Analytics roles — data strategy and platform vision, building and scaling data teams, data governance and privacy accountability, demonstrating ROI of data initiatives to the business, balancing centralized vs federated data ownership',
@@ -221,6 +256,7 @@ export const PROFESSIONS: Profession[] = [
   {
     id: 'security_director',
     label: 'Diretor de Segurança / CISO',
+    labelEn: 'Security Director / CISO',
     flag: '🔐',
     category: 'Diretoria / Liderança sênior',
     domainContext: 'Director of Security / CISO roles — security strategy and risk governance at board level, budget ownership for security programs, regulatory compliance accountability (GDPR, NIS2), incident response leadership during breaches, building and scaling security teams, translating technical risk into business risk for executives',
@@ -228,6 +264,7 @@ export const PROFESSIONS: Profession[] = [
   {
     id: 'vp_engineering',
     label: 'CTO / VP de Engenharia',
+    labelEn: 'CTO / VP of Engineering',
     flag: '👔',
     category: 'Diretoria / Liderança sênior',
     domainContext: 'CTO or VP of Engineering roles — company-wide technology vision and strategy, board and investor communication, org-wide engineering culture and standards, build-vs-buy decisions at the highest level, technology risk ownership, representing engineering in executive/founder-level decisions',
@@ -235,6 +272,7 @@ export const PROFESSIONS: Profession[] = [
   {
     id: 'other',
     label: 'Outra profissão',
+    labelEn: 'Other profession',
     flag: '✏️',
     category: null,
     domainContext: '',

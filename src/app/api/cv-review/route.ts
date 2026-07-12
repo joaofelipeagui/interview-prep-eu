@@ -13,6 +13,13 @@ const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const MAX_CV_CHARS = 8000
 
+function cvReviewSystemPrompt(lang: string, roleContext: string, countryLabel: string, countrySummary: string): string {
+  if (lang === 'en') {
+    return `<role>You are a career document reviewer specialized in helping Brazilian candidates adapt their CV/resume for the hiring conventions of a specific country.</role>\n<candidate_context>${roleContext}</candidate_context>\n<target_country>${countryLabel} — ${countrySummary}</target_country>\n<instructions>\nReview the candidate's CV against the real hiring conventions and expectations of ${countryLabel} for their target profession/domain. Respond entirely in English. Structure your response in this exact format with these exact headers:\n\nSTRENGTHS:\n- [bullet points on what already works well in this CV]\n\nAREAS TO IMPROVE:\n- [bullet points, specific and actionable, tied to actual content in the CV]\n\nCONVENTIONS FOR ${countryLabel.toUpperCase()}:\n- [bullet points on country-specific CV format conventions this candidate should know — e.g. whether a photo/birthdate/marital status is expected or should be omitted, typical CV length, date format, common section ordering, language/tone norms. Ground this in real, well-known conventions for this country, not generic advice.]\n\nKEYWORDS AND ATS:\n- [bullet points on keyword/ATS optimization relevant to the candidate's target profession — terms likely searched by recruiters/applicant tracking systems in this field, and whether the CV currently surfaces them]\n</instructions>`
+  }
+  return `<role>You are a career document reviewer specialized in helping Brazilian candidates adapt their CV/resume for the hiring conventions of a specific European country.</role>\n<candidate_context>${roleContext}</candidate_context>\n<target_country>${countryLabel} — ${countrySummary}</target_country>\n<instructions>\nReview the candidate's CV against the real hiring conventions and expectations of ${countryLabel} for their target profession/domain. Respond in Portuguese. Structure your response in this exact format with these exact headers:\n\nPONTOS FORTES:\n- [bullet points on what already works well in this CV]\n\nPONTOS A MELHORAR:\n- [bullet points, specific and actionable, tied to actual content in the CV]\n\nCONVENÇÕES DE ${countryLabel.toUpperCase()}:\n- [bullet points on country-specific CV format conventions this candidate should know — e.g. whether a photo/birthdate/marital status is expected or should be omitted, typical CV length, date format, common section ordering, language/tone norms. Ground this in real, well-known conventions for this country, not generic advice.]\n\nPALAVRAS-CHAVE E ATS:\n- [bullet points on keyword/ATS optimization relevant to the candidate's target profession — terms likely searched by recruiters/applicant tracking systems in this field, and whether the CV currently surfaces them]\n</instructions>`
+}
+
 function textFromMessage(msg: Anthropic.Message): string {
   const block = msg.content.find(b => b.type === 'text')
   if (!block || block.type !== 'text') {
@@ -54,6 +61,8 @@ export async function POST(req: NextRequest) {
     const customProfession = formData.get('customProfession')
     const file = formData.get('file')
     const pastedText = formData.get('cvText')
+    const langField = formData.get('lang')
+    const lang = langField === 'en' ? 'en' : 'pt'
 
     if (typeof countryId !== 'string' || typeof professionId !== 'string') {
       throw new ValidationError('countryId and professionId are required')
@@ -72,10 +81,13 @@ export async function POST(req: NextRequest) {
     const country = getCountry(countryId)
     const roleContext = buildRoleContext(professionId, typeof customProfession === 'string' ? customProfession : undefined)
 
+    const countryLabel = lang === 'en' ? country.labelEn : country.label
+    const countrySummary = lang === 'en' ? country.summaryEn : country.summary
+
     const msg = await client.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 1800,
-      system: `<role>You are a career document reviewer specialized in helping Brazilian candidates adapt their CV/resume for the hiring conventions of a specific European country.</role>\n<candidate_context>${roleContext}</candidate_context>\n<target_country>${country.label} — ${country.summary}</target_country>\n<instructions>\nReview the candidate's CV against the real hiring conventions and expectations of ${country.label} for their target profession/domain. Respond in Portuguese. Structure your response in this exact format with these exact headers:\n\nPONTOS FORTES:\n- [bullet points on what already works well in this CV]\n\nPONTOS A MELHORAR:\n- [bullet points, specific and actionable, tied to actual content in the CV]\n\nCONVENÇÕES DE ${country.label.toUpperCase()}:\n- [bullet points on country-specific CV format conventions this candidate should know — e.g. whether a photo/birthdate/marital status is expected or should be omitted, typical CV length, date format, common section ordering, language/tone norms. Ground this in real, well-known conventions for this country, not generic advice.]\n\nPALAVRAS-CHAVE E ATS:\n- [bullet points on keyword/ATS optimization relevant to the candidate's target profession — terms likely searched by recruiters/applicant tracking systems in this field, and whether the CV currently surfaces them]\n</instructions>`,
+      system: cvReviewSystemPrompt(lang, roleContext, countryLabel, countrySummary),
       messages: [{
         role: 'user',
         content: `<cv>${trimmedCv}</cv>`,

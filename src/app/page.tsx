@@ -2,13 +2,14 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { COUNTRIES, type CountryId } from '@/lib/countries'
-import { PROFESSIONS, groupProfessions, type ProfessionId, isProfessionComplete } from '@/lib/professions'
+import { PROFESSIONS, CATEGORY_LABELS_EN, groupProfessions, type ProfessionId, isProfessionComplete } from '@/lib/professions'
 import { generateFeedbackPDF } from '@/lib/pdf'
 import FeedbackCard from '@/components/FeedbackCard'
 import PlansPanel, { type VerifiedSubscription } from '@/components/PlansPanel'
 import CvReviewPanel from '@/components/CvReviewPanel'
 import { getOrCreateClientId } from '@/lib/clientId'
-import { Loader2, ArrowRight, RotateCcw, Mic, Square, Download, ChevronDown } from 'lucide-react'
+import { translations, getInitialLocale, LOCALE_KEY, type Locale } from '@/lib/i18n'
+import { Loader2, ArrowRight, RotateCcw, Mic, Square, Download, ChevronDown, Languages } from 'lucide-react'
 
 type Stage = 'select' | 'question' | 'evaluating' | 'feedback'
 type LimitScope = 'person' | 'global'
@@ -96,6 +97,9 @@ export default function Home() {
   const [paceWpm, setPaceWpm] = useState<number | null>(null)
   const [fillerWordCount, setFillerWordCount] = useState<number | null>(null)
   const [limitScope, setLimitScope] = useState<LimitScope | null>(null)
+  const [locale, setLocale] = useState<Locale>('pt')
+
+  const T = translations[locale]
 
   const recognitionRef = useRef<MinimalSpeechRecognition | null>(null)
   const baseAnswerRef = useRef('')
@@ -116,6 +120,9 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setSpeechSupported(!!getSpeechRecognitionCtor())
     setConsentGiven(localStorage.getItem(CONSENT_KEY) === 'true')
+    const initialLocale = getInitialLocale()
+    setLocale(initialLocale)
+    const initialT = translations[initialLocale]
 
     const params = new URLSearchParams(window.location.search)
     const checkoutStatus = params.get('checkout')
@@ -130,13 +137,11 @@ export default function Home() {
           localStorage.removeItem(PENDING_EMAIL_KEY)
         }
         if (checkoutStatus === 'success') {
-          setCheckoutBanner(sub.active
-            ? 'Pagamento confirmado! Seu acesso já está liberado.'
-            : 'Pagamento recebido — pode levar alguns segundos para confirmar. Clique em "Verificar acesso" daqui a pouco se ainda não liberou.')
+          setCheckoutBanner(sub.active ? initialT.paymentConfirmed : initialT.paymentReceivedCheck)
         }
       })
     } else if (checkoutStatus === 'success') {
-      setCheckoutBanner('Pagamento recebido! Se você informou seu e-mail na compra, verifique o acesso abaixo.')
+      setCheckoutBanner(initialT.paymentReceivedGeneric)
     }
 
     return () => {
@@ -148,6 +153,12 @@ export default function Home() {
     if (!consentChecked) return
     localStorage.setItem(CONSENT_KEY, 'true')
     setConsentGiven(true)
+  }
+
+  function toggleLocale() {
+    const next: Locale = locale === 'pt' ? 'en' : 'pt'
+    localStorage.setItem(LOCALE_KEY, next)
+    setLocale(next)
   }
 
   function handleSubscriptionVerified(email: string, sub: VerifiedSubscription) {
@@ -197,7 +208,7 @@ export default function Home() {
     recognition.onerror = () => {
       recognitionRef.current = null
       setRecording(false)
-      setSpeechError('Não foi possível capturar sua voz. Verifique a permissão do microfone e tente novamente.')
+      setSpeechError(T.speechError)
     }
 
     recognition.onend = () => {
@@ -259,7 +270,7 @@ export default function Home() {
         setLimitScope(data.scope)
         return
       }
-      if (!res.ok) throw new Error(data.error || 'Falha ao gerar pergunta')
+      if (!res.ok) throw new Error(data.error || T.errorGeneratingQuestion)
       setQuestion(data.question)
       setAnswer('')
       setPaceWpm(null)
@@ -267,7 +278,7 @@ export default function Home() {
       setStage('question')
     } catch (e) {
       if (myRequestId === requestIdRef.current) {
-        setError(e instanceof Error ? e.message : 'Erro inesperado')
+        setError(e instanceof Error ? e.message : T.genericError)
       }
     } finally {
       if (myRequestId === requestIdRef.current) setLoading(false)
@@ -288,7 +299,7 @@ export default function Home() {
       const res = await fetch('/api/interview', {
         method: 'POST',
         headers: authHeaders(),
-        body: JSON.stringify({ type: 'evaluate', payload: { countryId, professionId, customProfession, question, answer, paceWpm, fillerWordCount } }),
+        body: JSON.stringify({ type: 'evaluate', payload: { countryId, professionId, customProfession, question, answer, paceWpm, fillerWordCount, lang: locale } }),
       })
       const data = await res.json()
       if (myRequestId !== requestIdRef.current) return
@@ -296,13 +307,13 @@ export default function Home() {
         setLimitScope(data.scope)
         return
       }
-      if (!res.ok) throw new Error(data.error || 'Falha ao avaliar resposta')
+      if (!res.ok) throw new Error(data.error || T.errorEvaluating)
       setFeedback(data.feedback)
       setAskedSoFar(prev => [...prev, question])
       setStage('feedback')
     } catch (e) {
       if (myRequestId === requestIdRef.current) {
-        setError(e instanceof Error ? e.message : 'Erro inesperado')
+        setError(e instanceof Error ? e.message : T.genericError)
         setStage('question')
       }
     } finally {
@@ -313,10 +324,11 @@ export default function Home() {
   function downloadFeedbackPdf() {
     if (!country || !feedback) return
     generateFeedbackPDF({
-      countryLabel: country.label,
-      professionLabel: professionId === 'other' ? customProfession : (profession?.label ?? ''),
+      countryLabel: locale === 'en' ? country.labelEn : country.label,
+      professionLabel: professionId === 'other' ? customProfession : ((locale === 'en' ? profession?.labelEn : profession?.label) ?? ''),
       question,
       feedback,
+      locale,
     })
   }
 
@@ -346,23 +358,26 @@ export default function Home() {
     <div className="flex flex-col flex-1 items-center bg-zinc-50 font-sans dark:bg-black">
       <main className="flex-1 flex flex-col items-center w-full px-4 py-10 sm:py-16">
         <div className="w-full max-w-2xl">
-          <header className="mb-10 text-center">
+          <header className="mb-10 text-center relative">
+            <button
+              onClick={toggleLocale}
+              className="absolute right-0 top-0 inline-flex items-center gap-1 rounded-full border border-zinc-200 dark:border-zinc-800 px-3 py-1 text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:border-zinc-400 dark:hover:border-zinc-600 transition-colors"
+            >
+              <Languages size={12} /> {locale === 'pt' ? 'EN' : 'PT'}
+            </button>
             <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-black dark:text-zinc-50">
-              Simulador de Entrevistas | Vagas Remotas & Relocation
+              {T.headerTitle}
             </h1>
             <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-              Treine entrevistas em inglês no estilo real de cada país, adaptado à sua profissão.
+              {T.headerSubtitle}
             </p>
           </header>
 
           {!consentGiven ? (
             <div className="space-y-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 p-6">
-              <div className="text-lg font-medium text-black dark:text-zinc-50">Antes de começar</div>
+              <div className="text-lg font-medium text-black dark:text-zinc-50">{T.consentTitle}</div>
               <ul className="text-sm text-zinc-600 dark:text-zinc-400 space-y-2 list-disc pl-5">
-                <li>Suas respostas (texto e transcrição de voz) são enviadas para a API da Anthropic apenas para gerar o feedback desta sessão — não são usadas para treinar modelos de IA.</li>
-                <li>Se você usar &ldquo;Responder falando&rdquo;, o áudio é processado pelo próprio navegador (Web Speech API); nenhum áudio é enviado a servidores, só o texto transcrito.</li>
-                <li>Guardamos um identificador anônimo do seu navegador e o IP apenas para controlar o limite de testes gratuitos — não identificamos você pessoalmente com isso.</li>
-                <li>Se você comprar acesso, seu e-mail é usado só para liberar e verificar sua compra. Nunca é vendido ou compartilhado com terceiros.</li>
+                {T.consentBullets.map((bullet, i) => <li key={i}>{bullet}</li>)}
               </ul>
               <label className="flex items-start gap-2 text-sm text-black dark:text-zinc-50 cursor-pointer">
                 <input
@@ -371,14 +386,14 @@ export default function Home() {
                   onChange={e => setConsentChecked(e.target.checked)}
                   className="mt-0.5"
                 />
-                Li e concordo com o uso das minhas respostas conforme descrito acima.
+                {T.consentCheckbox}
               </label>
               <button
                 onClick={acceptConsent}
                 disabled={!consentChecked}
                 className="inline-flex items-center gap-2 rounded-lg bg-black dark:bg-white text-white dark:text-black px-4 py-2 text-sm font-medium disabled:opacity-40"
               >
-                Começar <ArrowRight size={16} />
+                {T.consentButton} <ArrowRight size={16} />
               </button>
             </div>
           ) : (
@@ -390,7 +405,7 @@ export default function Home() {
                     mode === 'interview' ? 'bg-black dark:bg-white text-white dark:text-black' : 'text-zinc-500 hover:text-black dark:hover:text-white'
                   }`}
                 >
-                  🎤 Simulador de Entrevista
+                  {T.modeInterview}
                 </button>
                 <button
                   onClick={() => setMode('cv')}
@@ -398,7 +413,7 @@ export default function Home() {
                     mode === 'cv' ? 'bg-black dark:bg-white text-white dark:text-black' : 'text-zinc-500 hover:text-black dark:hover:text-white'
                   }`}
                 >
-                  📄 Revisão de Currículo
+                  {T.modeCv}
                 </button>
               </div>
 
@@ -415,11 +430,12 @@ export default function Home() {
               )}
 
               {mode === 'cv' ? (
-                <CvReviewPanel userEmail={subscribed ? subscription?.email : undefined} onSubscribed={handleSubscriptionVerified} />
+                <CvReviewPanel locale={locale} userEmail={subscribed ? subscription?.email : undefined} onSubscribed={handleSubscriptionVerified} />
               ) : limitScope ? (
                 <PlansPanel
-                  title={limitScope === 'person' ? 'Você já usou sua avaliação gratuita neste teste' : 'Chegamos ao limite de testes gratuitos de hoje'}
-                  subtitle="Escolha um plano pra continuar praticando sem limite, e desbloquear a revisão de currículo."
+                  locale={locale}
+                  title={limitScope === 'person' ? T.personLimitTitle : T.globalLimitTitle}
+                  subtitle={T.plansSubtitle}
                   knownEmail={subscription?.email}
                   onVerified={handleSubscriptionVerified}
                 />
@@ -428,7 +444,7 @@ export default function Home() {
                   {stage === 'select' && (
                     <div className="space-y-8">
                       <div>
-                        <div className="text-xs uppercase tracking-wide text-zinc-500 mb-3">1. País do entrevistador</div>
+                        <div className="text-xs uppercase tracking-wide text-zinc-500 mb-3">{T.stepCountry}</div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           {COUNTRIES.map(c => (
                             <button
@@ -441,15 +457,15 @@ export default function Home() {
                                   : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-600'
                               }`}
                             >
-                              <div className="text-lg font-medium text-black dark:text-zinc-50">{c.flag} {c.label}</div>
-                              <div className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{c.summary}</div>
+                              <div className="text-lg font-medium text-black dark:text-zinc-50">{c.flag} {locale === 'en' ? c.labelEn : c.label}</div>
+                              <div className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{locale === 'en' ? c.summaryEn : c.summary}</div>
                             </button>
                           ))}
                         </div>
                         {country && (
                           <div className="mt-3 rounded-lg bg-zinc-100 dark:bg-zinc-900 p-3 space-y-1">
-                            <div className="text-xs font-medium text-zinc-600 dark:text-zinc-400">Por que considerar {country.label}:</div>
-                            {country.funFacts.map((fact, i) => (
+                            <div className="text-xs font-medium text-zinc-600 dark:text-zinc-400">{T.whyConsider} {locale === 'en' ? country.labelEn : country.label}:</div>
+                            {(locale === 'en' ? country.funFactsEn : country.funFacts).map((fact, i) => (
                               <div key={i} className="text-xs text-zinc-500 dark:text-zinc-500 leading-relaxed">• {fact}</div>
                             ))}
                           </div>
@@ -457,7 +473,7 @@ export default function Home() {
                       </div>
 
                       <div>
-                        <div className="text-xs uppercase tracking-wide text-zinc-500 mb-3">2. Sua profissão</div>
+                        <div className="text-xs uppercase tracking-wide text-zinc-500 mb-3">{T.stepProfession}</div>
                         <div className="space-y-2">
                           {groupProfessions().map(group => {
                             const key = group.category ?? 'other'
@@ -469,7 +485,7 @@ export default function Home() {
                                     onClick={() => toggleCategory(group.category!)}
                                     className="w-full flex items-center justify-between py-1.5 text-[11px] uppercase tracking-wide text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300"
                                   >
-                                    {group.category}
+                                    {locale === 'en' ? (CATEGORY_LABELS_EN[group.category] ?? group.category) : group.category}
                                     <ChevronDown size={12} className={`transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
                                   </button>
                                 )}
@@ -485,7 +501,7 @@ export default function Home() {
                                             : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-600'
                                         }`}
                                       >
-                                        <div className="text-base font-medium text-black dark:text-zinc-50">{p.flag} {p.label}</div>
+                                        <div className="text-base font-medium text-black dark:text-zinc-50">{p.flag} {locale === 'en' ? p.labelEn : p.label}</div>
                                       </button>
                                     ))}
                                   </div>
@@ -498,7 +514,7 @@ export default function Home() {
                           <input
                             value={customProfession}
                             onChange={e => setCustomProfession(e.target.value)}
-                            placeholder="Digite sua profissão/área (ex: UX Designer, Segurança da Informação...)"
+                            placeholder={T.otherProfessionPlaceholder}
                             className="mt-1 w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-black dark:text-zinc-50 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-400"
                           />
                         )}
@@ -510,7 +526,7 @@ export default function Home() {
                         className="inline-flex items-center gap-2 rounded-lg bg-black dark:bg-white text-white dark:text-black px-4 py-2 text-sm font-medium disabled:opacity-40"
                       >
                         {loading ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} />}
-                        Começar entrevista
+                        {T.startInterview}
                       </button>
                     </div>
                   )}
@@ -520,14 +536,14 @@ export default function Home() {
                       <div className="flex items-center justify-between flex-wrap gap-2">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="inline-flex items-center gap-2 rounded-full border border-zinc-200 dark:border-zinc-800 px-3 py-1 text-sm text-black dark:text-zinc-50">
-                            {country.flag} {country.label}
+                            {country.flag} {locale === 'en' ? country.labelEn : country.label}
                           </span>
                           <span className="inline-flex items-center gap-2 rounded-full border border-zinc-200 dark:border-zinc-800 px-3 py-1 text-sm text-black dark:text-zinc-50">
-                            {profession?.flag} {professionId === 'other' ? customProfession : profession?.label}
+                            {profession?.flag} {professionId === 'other' ? customProfession : (locale === 'en' ? profession?.labelEn : profession?.label)}
                           </span>
                           {subscribed && (
                             <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 px-3 py-1 text-sm">
-                              ✓ acesso ilimitado
+                              {T.unlimitedAccess}
                             </span>
                           )}
                         </div>
@@ -536,17 +552,17 @@ export default function Home() {
                           disabled={loading}
                           className="inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 disabled:opacity-40"
                         >
-                          <RotateCcw size={14} /> reconfigurar
+                          <RotateCcw size={14} /> {T.reconfigure}
                         </button>
                       </div>
 
                       {loading && stage === 'question' && !question ? (
                         <div className="flex items-center gap-2 text-zinc-500 text-sm">
-                          <Loader2 className="animate-spin" size={16} /> Gerando pergunta...
+                          <Loader2 className="animate-spin" size={16} /> {T.generatingQuestion}
                         </div>
                       ) : (
                         <div className="rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 p-5">
-                          <div className="text-xs uppercase tracking-wide text-zinc-500 mb-2">Pergunta</div>
+                          <div className="text-xs uppercase tracking-wide text-zinc-500 mb-2">{T.questionLabel}</div>
                           <p className="text-base leading-relaxed text-black dark:text-zinc-50">{question}</p>
                         </div>
                       )}
@@ -556,7 +572,7 @@ export default function Home() {
                           <textarea
                             value={answer}
                             onChange={e => { setAnswer(e.target.value); setPaceWpm(null); setFillerWordCount(null) }}
-                            placeholder="Escreva ou grave sua resposta em inglês..."
+                            placeholder={T.answerPlaceholder}
                             rows={6}
                             className="w-full rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-black dark:text-zinc-50 p-4 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-400 resize-none"
                           />
@@ -572,15 +588,15 @@ export default function Home() {
                                   }`}
                                 >
                                   {recording ? <Square size={14} /> : <Mic size={14} />}
-                                  {recording ? 'Parar gravação' : 'Responder falando'}
+                                  {recording ? T.stopRecording : T.speakAnswer}
                                 </button>
-                                {recording && <span className="text-xs text-red-600 dark:text-red-400 animate-pulse">gravando...</span>}
+                                {recording && <span className="text-xs text-red-600 dark:text-red-400 animate-pulse">{T.recordingLabel}</span>}
                                 {!recording && paceWpm !== null && (
-                                  <span className="text-xs text-zinc-500">Ritmo estimado: {paceWpm} palavras/min</span>
+                                  <span className="text-xs text-zinc-500">{T.paceEstimate}: {paceWpm} {locale === 'en' ? 'wpm' : 'palavras/min'}</span>
                                 )}
                                 {!recording && fillerWordCount !== null && (
                                   <span className="text-xs text-zinc-500">
-                                    {fillerWordCount === 0 ? 'Nenhuma muleta de linguagem detectada' : `${fillerWordCount} muleta${fillerWordCount > 1 ? 's' : ''} de linguagem (um, like...)`}
+                                    {fillerWordCount === 0 ? T.noFillerWords : `${fillerWordCount} ${fillerWordCount > 1 ? T.fillerWordsCountPlural : T.fillerWordsCount}`}
                                   </span>
                                 )}
                               </div>
@@ -594,33 +610,33 @@ export default function Home() {
                             disabled={loading || !answer.trim()}
                             className="inline-flex items-center gap-2 rounded-lg bg-black dark:bg-white text-white dark:text-black px-4 py-2 text-sm font-medium disabled:opacity-40"
                           >
-                            Enviar resposta <ArrowRight size={16} />
+                            {T.sendAnswer} <ArrowRight size={16} />
                           </button>
                         </div>
                       )}
 
                       {stage === 'evaluating' && (
                         <div className="flex items-center gap-2 text-zinc-500 text-sm">
-                          <Loader2 className="animate-spin" size={16} /> Avaliando resposta...
+                          <Loader2 className="animate-spin" size={16} /> {T.evaluatingAnswer}
                         </div>
                       )}
 
                       {stage === 'feedback' && (
                         <div className="space-y-4">
-                          <FeedbackCard feedback={feedback} />
+                          <FeedbackCard feedback={feedback} locale={locale} />
                           <div className="flex flex-wrap gap-3">
                             <button
                               onClick={nextQuestion}
                               disabled={loading}
                               className="inline-flex items-center gap-2 rounded-lg bg-black dark:bg-white text-white dark:text-black px-4 py-2 text-sm font-medium disabled:opacity-40"
                             >
-                              Próxima pergunta <ArrowRight size={16} />
+                              {T.nextQuestion} <ArrowRight size={16} />
                             </button>
                             <button
                               onClick={downloadFeedbackPdf}
                               className="inline-flex items-center gap-2 rounded-lg border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-zinc-400 dark:hover:border-zinc-600 px-4 py-2 text-sm font-medium transition-colors"
                             >
-                              Baixar PDF <Download size={16} />
+                              {T.downloadPdf} <Download size={16} />
                             </button>
                           </div>
                         </div>
